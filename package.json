@@ -17,6 +17,11 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
+  "//overrides": "framer-motion 12.23.24 declares motion-dom ^12.23.23, but 12.43.0 removed the 'activeAnimations' export it imports — a breaking change shipped inside a caret range. Pinning both to an exact matched pair keeps installs reproducible. Remove this block only if framer-motion and motion-dom are upgraded together.",
+  "overrides": {
+    "motion-dom": "12.23.23",
+    "motion-utils": "12.23.6"
+  },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
     "@prisma/client": "^6.16.2",
