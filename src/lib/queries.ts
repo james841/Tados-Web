@@ -174,18 +174,45 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
   });
 }
 
-/** Leaf categories with imagery, for the home "Popular Categories" rail. */
-export async function getFeaturedCategories() {
+export interface FeaturedCategory {
+  id: string;
+  name: string;
+  slug: string;
+  image: string | null;
+  icon: string | null;
+  productCount: number;
+  parentName: string | null;
+}
+
+/**
+ * Sub-categories flagged for the home "Popular Categories" rail.
+ *
+ * `featured` is the admin's "Show on homepage" toggle, so what appears here is
+ * an explicit editorial choice rather than a derived rule. Empty categories are
+ * allowed through — an admin who ticks the box for a category they're about to
+ * stock shouldn't have the tile silently withheld.
+ *
+ * `position` restarts at 0 inside every parent, so sorting on it alone
+ * interleaves siblings from different parents in an arbitrary order. Sorting
+ * by the parent's position first keeps the rail grouped the same way the
+ * header dropdown is, and makes the output stable enough to cache.
+ */
+export async function getFeaturedCategories(): Promise<FeaturedCategory[]> {
   return cached(cacheKeys.featuredCategories, 3600, async () => {
     const categories = await prisma.category.findMany({
-      where: { parentId: { not: null } },
-      orderBy: { position: "asc" },
+      where: { parentId: { not: null }, featured: true },
+      orderBy: [
+        { parent: { position: "asc" } },
+        { position: "asc" },
+        { name: "asc" },
+      ],
       select: {
         id: true,
         name: true,
         slug: true,
         image: true,
         icon: true,
+        parent: { select: { name: true } },
         _count: { select: { products: true } },
       },
     });
@@ -197,6 +224,7 @@ export async function getFeaturedCategories() {
       image: c.image,
       icon: c.icon,
       productCount: c._count.products,
+      parentName: c.parent?.name ?? null,
     }));
   });
 }

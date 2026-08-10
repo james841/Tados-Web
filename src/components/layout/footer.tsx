@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Facebook, Instagram, Linkedin, Truck, ShieldCheck, RotateCcw } from "lucide-react";
 
-import { CATEGORY_TREE, SITE } from "@/lib/constants";
+import { LogoLink } from "@/components/layout/logo";
+import { SITE } from "@/lib/constants";
+import { getCategoryTree } from "@/lib/queries";
 
 const SHOP_LINKS = [
   { label: "All Products", href: "/products" },
@@ -25,7 +27,15 @@ const POLICY_LINKS = [
   { label: "Warranty", href: "/warranty" },
 ];
 
-export function Footer() {
+/**
+ * Site footer.
+ *
+ * A Server Component, so unlike the header it reads the category tree itself
+ * rather than taking it as a prop. Same cached query either way.
+ */
+export async function Footer() {
+  const categories = await getCategoryTree();
+
   return (
     <footer className="mt-16 bg-ink-950 text-ink-300">
       {/* Trust badges strip */}
@@ -53,12 +63,9 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-5">
           {/* Brand column */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-brand-600">
-                <span className="text-lg font-bold text-white">T</span>
-              </div>
-              <span className="text-xl font-bold text-white">Tados Web</span>
-            </Link>
+            {/* The untouched silver artwork, which is what the mark is designed
+                for — this footer is near-black. Not priority: it's below the fold. */}
+            <LogoLink variant="light" className="h-11" priority={false} />
 
             <p className="mt-4 max-w-sm text-sm leading-relaxed">
               South Africa&apos;s smart security and automation store. Smart
@@ -81,7 +88,7 @@ export function Footer() {
 
           <FooterColumn
             title="Categories"
-            links={CATEGORY_TREE.map((c) => ({
+            links={categories.map((c) => ({
               label: c.name,
               href: `/category/${c.slug}`,
             }))}

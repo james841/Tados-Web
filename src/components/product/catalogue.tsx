@@ -5,6 +5,7 @@ import { ProductGrid } from "@/components/product/product-card";
 import { ProductFilters, SortSelect } from "@/components/product/filters";
 import { ProductGridSkeleton, EmptyState, ButtonLink } from "@/components/ui";
 import { getProducts, getAllBrands } from "@/lib/queries";
+import type { ProductFilters as ProductFilterInput } from "@/lib/queries";
 import type { SortOption } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -13,14 +14,26 @@ import { cn } from "@/lib/utils";
  *
  * This lives outside the route files because a Next.js `page.tsx` may only
  * export a known set of members (default, metadata, generateStaticParams…).
- * Both /products and /category/[slug] render this.
+ * /products, /category/[slug], /bestsellers, /new-arrivals and /deals all
+ * render this.
  */
 export async function Catalogue({
   params,
   categorySlug,
+  fixedFilters,
+  emptyState,
 }: {
   params: Record<string, string | string[] | undefined>;
   categorySlug?: string;
+  /**
+   * Filters the route enforces regardless of the query string — e.g. /deals is
+   * always `onSale`. Applied last so a URL param can't switch them off.
+   */
+  fixedFilters?: Pick<
+    ProductFilterInput,
+    "onSale" | "inStock" | "bestsellersOnly" | "newArrivalsOnly"
+  >;
+  emptyState?: { title: string; description: string };
 }) {
   const brandParam = params.brand;
   const brandSlugs = Array.isArray(brandParam)
@@ -50,6 +63,7 @@ export async function Catalogue({
       page: asNumber(params.page) ?? 1,
       onSale: asString(params.onSale) === "1",
       inStock: asString(params.inStock) === "1",
+      ...fixedFilters,
     }),
     getAllBrands(),
   ]);
@@ -69,11 +83,14 @@ export async function Catalogue({
         {result.products.length === 0 ? (
           <EmptyState
             icon={<PackageSearch size={40} />}
-            title="No products match those filters"
-            description="Try widening your price range or clearing a brand filter."
+            title={emptyState?.title ?? "No products match those filters"}
+            description={
+              emptyState?.description ??
+              "Try widening your price range or clearing a brand filter."
+            }
             action={
               <ButtonLink href="/products" variant="dark">
-                Clear all filters
+                Browse all products
               </ButtonLink>
             }
           />

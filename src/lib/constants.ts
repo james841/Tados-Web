@@ -29,10 +29,15 @@ export const SITE = {
 } as const;
 
 /**
- * Category tree.
+ * Category tree — the reference taxonomy.
  *
  * level 1 = navigation dropdown headings
  * level 2 = the actual product buckets
+ *
+ * No longer read by the header, footer or homepage: those go through
+ * `getCategoryTree()` so an admin's changes show up without a deploy. This
+ * stays as the shape `prisma/seed.ts` builds from, and as the canonical list
+ * when you need the taxonomy without a database.
  */
 export const CATEGORY_TREE = [
   {

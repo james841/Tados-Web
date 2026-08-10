@@ -1,39 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { Search, ShoppingBag, User, Menu, X } from "lucide-react";
+import { Search, ShoppingBag, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 
-import { CATEGORY_TREE } from "@/lib/constants";
+import { AccountMenu } from "@/components/layout/account-menu";
+import { LogoLink } from "@/components/layout/logo";
+import type { CategoryNode } from "@/lib/queries";
 import { useCart, selectCartCount } from "@/store/cart";
 import { cn } from "@/lib/utils";
 
-export function Header() {
+/**
+ * Site header.
+ *
+ * `categories` comes down from the root layout rather than being fetched here:
+ * this is a client component (cart state, mobile menu, session), so it can't
+ * query the database itself. It defaults to an empty array so a failed query
+ * costs the dropdown, not the whole header.
+ */
+export function Header({ categories = [] }: { categories?: CategoryNode[] }) {
   const pathname = usePathname();
   const cartCount = useCart(selectCartCount);
+  const openCart = useCart((s) => s.openCart);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
       <div className="container-page">
         <div className="flex h-16 items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-brand-600">
-              <span className="text-lg font-bold text-white">T</span>
-            </div>
-            <span className="hidden text-xl font-bold text-ink-900 sm:inline">
-              Tados
-            </span>
-          </Link>
+          {/* Logo — visible at every breakpoint; it's the only home affordance
+              on mobile, where the nav collapses into the menu button. */}
+          <LogoLink className="h-8 sm:h-9" />
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 lg:flex">
             <NavLink href="/" active={pathname === "/"}>
               Home
             </NavLink>
-            <CategoryDropdown />
+            <CategoryDropdown categories={categories} />
             <NavLink href="/bestsellers" active={pathname === "/bestsellers"}>
               Bestsellers
             </NavLink>
@@ -52,18 +58,16 @@ export function Header() {
               <Search size={20} />
             </Link>
 
-            <Link
-              href="/account"
-              className="hidden size-10 items-center justify-center rounded-lg text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900 sm:flex"
-              aria-label="Account"
-            >
-              <User size={20} />
-            </Link>
+            <AccountMenu />
 
-            <Link
-              href="/cart"
+            {/* Opens the slide-over rather than navigating — /cart still
+                exists as the full page, linked from inside the drawer. */}
+            <button
+              type="button"
+              onClick={openCart}
               className="relative flex size-10 items-center justify-center rounded-lg text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900"
               aria-label={`Cart, ${cartCount} items`}
+              aria-haspopup="dialog"
             >
               <ShoppingBag size={20} />
               {cartCount > 0 ? (
@@ -71,7 +75,7 @@ export function Header() {
                   {cartCount > 9 ? "9+" : cartCount}
                 </span>
               ) : null}
-            </Link>
+            </button>
 
             <button
               type="button"
@@ -93,7 +97,7 @@ export function Header() {
             <MobileLink href="/products" onClick={() => setMobileOpen(false)}>
               All Products
             </MobileLink>
-            {CATEGORY_TREE.map((parent) => (
+            {categories.map((parent) => (
               <details key={parent.slug} className="group">
                 <summary className="flex cursor-pointer items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900">
                   {parent.name}
@@ -114,9 +118,7 @@ export function Header() {
                 </div>
               </details>
             ))}
-            <MobileLink href="/account" onClick={() => setMobileOpen(false)}>
-              My Account
-            </MobileLink>
+            <MobileAccountLinks onNavigate={() => setMobileOpen(false)} />
           </nav>
         ) : null}
       </div>
@@ -148,8 +150,11 @@ function NavLink({
   );
 }
 
-function CategoryDropdown() {
+function CategoryDropdown({ categories }: { categories: CategoryNode[] }) {
   const [open, setOpen] = useState(false);
+
+  // Nothing to drop down to — don't offer a button that opens an empty panel.
+  if (categories.length === 0) return null;
 
   return (
     <div
@@ -167,7 +172,7 @@ function CategoryDropdown() {
       {open ? (
         <div className="absolute left-0 top-full mt-2 w-[720px] rounded-card border border-ink-200 bg-white p-6 shadow-lift">
           <div className="grid grid-cols-2 gap-6">
-            {CATEGORY_TREE.map((parent) => (
+            {categories.map((parent) => (
               <div key={parent.slug}>
                 <Link
                   href={`/category/${parent.slug}`}
@@ -193,6 +198,62 @@ function CategoryDropdown() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Mobile-menu account block.
+ *
+ * Signed in, an avatar-less row with the user's name plus account / orders /
+ * admin links — the small-screen counterpart of the header AccountMenu. Signed
+ * out, the plain sign-in link.
+ */
+function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
+  const { data: session, status } = useSession();
+
+  // Same flash-avoidance as the desktop menu: don't render the signed-out link
+  // while the session is still loading.
+  if (status === "loading") return null;
+
+  if (!session?.user) {
+    return (
+      <MobileLink href="/login" onClick={onNavigate}>
+        Sign in
+      </MobileLink>
+    );
+  }
+
+  const { user } = session;
+  const links = [
+    { href: "/account", label: "My account" },
+    { href: "/account#orders", label: "My orders" },
+    ...(user.role === "ADMIN" ? [{ href: "/admin", label: "Admin dashboard" }] : []),
+  ];
+
+  return (
+    <>
+      {links.map((link) => (
+        <MobileLink key={link.href} href={link.href} onClick={onNavigate}>
+          {link.label}
+        </MobileLink>
+      ))}
+      <div className="border-t border-ink-200 px-4 pb-1 pt-3">
+        <p className="text-sm font-semibold text-ink-900">
+          {user.name ?? "Signed in"}
+        </p>
+        <p className="truncate text-xs text-ink-500">{user.email}</p>
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate();
+            void signOut({ callbackUrl: "/" });
+          }}
+          className="mt-2 rounded-lg px-0 py-1 text-sm font-medium text-red-600 hover:underline"
+        >
+          Sign out
+        </button>
+      </div>
+    </>
   );
 }
 

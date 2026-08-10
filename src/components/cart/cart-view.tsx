@@ -9,7 +9,6 @@ import { useState } from "react";
 import { useCart, selectCartCount, selectCartSubtotal } from "@/store/cart";
 import { ButtonLink, EmptyState, Price } from "@/components/ui";
 import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 
 /**
  * Cart view with inline quantity controls and a "Clear cart" button that

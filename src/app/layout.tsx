@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Providers } from "@/components/providers";
 import { SITE } from "@/lib/constants";
+import { getCategoryTree } from "@/lib/queries";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -64,6 +65,12 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  /**
+   * src/app/icon.png and src/app/apple-icon.png are picked up automatically by
+   * the App Router, so only the manifest needs declaring here. The old
+   * favicon.ico was removed — it would otherwise take precedence over icon.png.
+   */
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -121,9 +128,19 @@ function OrganisationSchema() {
   );
 }
 
-export default function RootLayout({
+/**
+ * Root layout.
+ *
+ * `async` so the header's category dropdown can be driven by the database
+ * rather than a hardcoded list — an admin adding a category should see it in
+ * the menu, not just on the homepage. The query is Redis-cached for an hour and
+ * invalidated on every category write, so this costs nothing per request.
+ */
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const categories = await getCategoryTree();
+
   return (
     <html lang="en-ZA">
       <head>
@@ -139,7 +156,7 @@ export default function RootLayout({
             Skip to content
           </a>
 
-          <Header />
+          <Header categories={categories} />
           <main id="main" className="flex-1">
             {children}
           </main>

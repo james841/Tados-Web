@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "i.pinimg.com" },
+      // Google account avatars. Required — next/image throws at runtime for any
+      // host not listed here, so the header avatar cannot render without it.
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
 

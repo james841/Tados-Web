@@ -22,7 +22,13 @@ entries in section 9, and some static pages describe the *intended* design, not 
 - Zustand cart store (`src/store/cart.ts`)
 - Header with category dropdown, footer, root layout with full SEO + JSON-LD
 - **Hero carousel** with Framer Motion (Ken Burns zoom-out effect + text transitions)
+- **"Most Popular Categories" rail** (`src/components/home/category-carousel.tsx`) — a
+  single row of category cards that auto-advances right-to-left every 6s and loops
+  forever. Each card links to `/category/[slug]`, the same destination as the header
+  dropdown. Pauses on hover/focus, honours `prefers-reduced-motion`, and has manual
+  prev/next/pause controls plus dot navigation. Fed by `getFeaturedCategories()`.
 - Home page with hero, promo band, deal banners, lifestyle CTA
+
 - Catalogue with URL-driven filters + pagination, category pages,
   product detail page with Product/Offer/AggregateRating/Breadcrumb structured data
 - **`/cart` page** with inline quantity controls + **sign-in gate on "Clear cart"**

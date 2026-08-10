@@ -669,6 +669,8 @@ async function seedCategories() {
           image: child.image,
           position: childIndex,
           parentId: created.id,
+          // `featured` is deliberately absent: it's the admin's "Show on
+          // homepage" toggle, so re-seeding must not undo their choices.
         },
         create: {
           name: child.name,
@@ -678,6 +680,8 @@ async function seedCategories() {
           image: child.image,
           position: childIndex,
           parentId: created.id,
+          // A fresh database should render a populated homepage rail.
+          featured: true,
         },
       });
       slugToId.set(child.slug, createdChild.id);

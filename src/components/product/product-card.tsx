@@ -16,14 +16,21 @@ import { Badge, Price, StarRating, SaleBadge } from "@/components/ui";
  *
  * `priority` should be true only for above-the-fold cards so the LCP image
  * is preloaded and everything else stays lazy.
+ *
+ * `focusable` exists for carousels that duplicate cards to fake an infinite
+ * loop: the copies are decorative, so they must stay out of the tab order.
  */
 export function ProductCard({
   product,
   priority = false,
+  focusable = true,
+  onFocus,
   className,
 }: {
   product: ProductCardData;
   priority?: boolean;
+  focusable?: boolean;
+  onFocus?: () => void;
   className?: string;
 }) {
   const addItem = useCart((s) => s.addItem);
@@ -31,6 +38,8 @@ export function ProductCard({
   const [, startTransition] = useTransition();
 
   const outOfStock = product.stock <= 0;
+  const tabIndex = focusable ? undefined : -1;
+
 
   function handleAdd(event: React.MouseEvent) {
     // The whole card is a link — don't navigate when hitting the bag.
@@ -63,6 +72,8 @@ export function ProductCard({
     >
       <Link
         href={`/products/${product.slug}`}
+        tabIndex={tabIndex}
+        onFocus={onFocus}
         className="relative aspect-square overflow-hidden bg-ink-50"
       >
         {product.image ? (
@@ -105,7 +116,13 @@ export function ProductCard({
         </p>
 
         <h3 className="line-clamp-2-fixed min-h-10 text-sm font-semibold leading-5 text-ink-900">
-          <Link href={`/products/${product.slug}`}>{product.name}</Link>
+          <Link
+            href={`/products/${product.slug}`}
+            tabIndex={tabIndex}
+            onFocus={onFocus}
+          >
+            {product.name}
+          </Link>
         </h3>
 
         <StarRating
@@ -121,6 +138,8 @@ export function ProductCard({
             type="button"
             onClick={handleAdd}
             disabled={outOfStock}
+            tabIndex={tabIndex}
+            onFocus={onFocus}
             aria-label={`Add ${product.name} to cart`}
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-lg border transition-colors",

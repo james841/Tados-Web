@@ -1,0 +1,120 @@
+import { NextResponse } from "next/server";
+import { ZodError, type ZodSchema } from "zod";
+
+import { getCurrentUser } from "@/lib/auth";
+
+/**
+ * Shared plumbing for the admin JSON API.
+ *
+ * Every admin route needs the same three things — a role check, a parsed and
+ * validated body, and error responses that never leak internals — so they live
+ * here once rather than being re-typed (and slowly diverging) per route.
+ */
+
+export function jsonOk<T>(data: T, init?: ResponseInit) {
+  return NextResponse.json(data, init);
+}
+
+export function jsonError(message: string, status: number, extra?: unknown) {
+  return NextResponse.json({ error: message, details: extra }, { status });
+}
+
+/** Thrown by `requireAdmin` and mapped to a response by `handleRoute`. */
+export class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Gate for every /api/admin route.
+ *
+ * The middleware already keeps non-admins out of the admin pages, but it only
+ * sees the JWT cookie. Re-checking here means a hand-crafted request straight
+ * to the API is rejected too — the pages and the data are separate doors.
+ */
+export async function requireAdmin() {
+  const user = await getCurrentUser();
+
+  if (!user) throw new HttpError(401, "You must be signed in.");
+  if (user.role !== "ADMIN") throw new HttpError(403, "Admins only.");
+
+  return user;
+}
+
+/**
+ * Wraps a route body so thrown errors become clean JSON.
+ *
+ * Zod issues come back as 422 with field details the client form can display;
+ * anything unexpected is logged server-side and reported as a bare 500, so a
+ * stack trace or SQL fragment never reaches the browser.
+ */
+export async function handleRoute(fn: () => Promise<Response>) {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return jsonError(error.message, error.status);
+    }
+
+    if (error instanceof ZodError) {
+      return jsonError("Validation failed.", 422, error.flatten().fieldErrors);
+    }
+
+    // Unique-constraint violations are the one Prisma error worth naming:
+    // duplicate slug/SKU is a user mistake, not a server fault.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code: string }).code === "P2002"
+    ) {
+      const target = (error as { meta?: { target?: string[] } }).meta?.target;
+      return jsonError(
+        `That ${target?.join(", ") ?? "value"} is already taken.`,
+        409,
+      );
+    }
+
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code: string }).code === "P2025"
+    ) {
+      return jsonError("Not found.", 404);
+    }
+
+    console.error("[api]", error);
+    return jsonError("Something went wrong.", 500);
+  }
+}
+
+/** Parse a JSON body against a schema, rejecting malformed JSON up front. */
+export async function parseBody<T>(
+  request: Request,
+  schema: ZodSchema<T>,
+): Promise<T> {
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    throw new HttpError(400, "Expected a JSON body.");
+  }
+
+  return schema.parse(raw);
+}
+
+/** Clamped pagination, so a hand-typed `?perPage=100000` can't hurt the DB. */
+export function readPagination(searchParams: URLSearchParams) {
+  const page = Math.max(1, Number(searchParams.get("page") ?? 1) || 1);
+  const perPage = Math.min(
+    100,
+    Math.max(1, Number(searchParams.get("perPage") ?? 20) || 20),
+  );
+
+  return { page, perPage, skip: (page - 1) * perPage, take: perPage };
+}

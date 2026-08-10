@@ -7,9 +7,27 @@ import {
   DealBanners,
   LifestyleCta,
 } from "@/components/home/hero";
+import {
+  CategoryCarousel,
+  CategoryCarouselSkeleton,
+} from "@/components/home/category-carousel";
+import {
+  NewArrivalsCarousel,
+  NewArrivalsCarouselSkeleton,
+} from "@/components/home/new-arrivals";
 import { ProductGrid } from "@/components/product/product-card";
 import { SectionHeading, ProductCardSkeleton } from "@/components/ui";
-import { getFeaturedProducts } from "@/lib/queries";
+import {
+  getFeaturedCategories,
+  getFeaturedProducts,
+  getNewArrivals,
+} from "@/lib/queries";
+
+async function CategorySection() {
+  const categories = await getFeaturedCategories();
+
+  return <CategoryCarousel categories={categories} />;
+}
 
 async function FeaturedSection() {
   const products = await getFeaturedProducts();
@@ -26,11 +44,20 @@ async function FeaturedSection() {
   );
 }
 
+async function NewArrivalsSection() {
+  const products = await getNewArrivals(12);
+
+  return <NewArrivalsCarousel products={products} />;
+}
+
 export default function HomePage() {
   return (
     <>
       <Hero />
       <BrandStrip />
+      <Suspense fallback={<CategoryCarouselSkeleton />}>
+        <CategorySection />
+      </Suspense>
       <PromoBand />
       <Suspense
         fallback={
@@ -47,6 +74,10 @@ export default function HomePage() {
       </Suspense>
       <DealBanners />
       <LifestyleCta />
+      {/* Last section on the page — the footer's trust strip follows it. */}
+      <Suspense fallback={<NewArrivalsCarouselSkeleton />}>
+        <NewArrivalsSection />
+      </Suspense>
     </>
   );
 }

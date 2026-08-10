@@ -18,6 +18,8 @@ import crypto from "crypto";
  *  - Empty fields are excluded entirely.
  *  - Spaces encode as "+", and the encoding must be UPPERCASE hex (%2C not %2c).
  *  - The passphrase is appended last, and only when one is configured.
+ *  - The signature is *derived from* the passphrase, so it is only sent when one
+ *    is configured. See `buildPaymentData()` for why that matters in sandbox.
  */
 
 export const PAYFAST_MODE = (process.env.PAYFAST_MODE ?? "sandbox") as
@@ -85,6 +87,38 @@ export function generateSignature(
   return crypto.createHash("md5").update(withPassphrase).digest("hex");
 }
 
+/**
+ * Normalise a South African number to the 10-digit local mobile format
+ * PayFast accepts ("0821234567"), or return null if it isn't one.
+ *
+ * PayFast rejects the whole transaction with "cell_number: The cell number
+ * format is invalid" rather than ignoring a bad value, so anything we aren't
+ * sure about is better left out — the field is optional.
+ *
+ * Naively taking the last 10 digits is what breaks here: "+27 82 123 4567" is
+ * 11 digits, and its last 10 are "7821234567" — a well-formed-looking number
+ * starting with 7 that is not a valid SA mobile. The country code has to be
+ * stripped from the front instead.
+ *
+ * Landlines (011…, 021…) are also rejected: PayFast wants a *cell* number, and
+ * the checkout form accepts any SA phone number.
+ */
+function toSaCellNumber(phone: string): string | null {
+  let digits = phone.replace(/\D/g, "");
+
+  // "0027821234567" -> "27821234567"
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  // "27821234567" -> "821234567"
+  if (digits.startsWith("27")) digits = digits.slice(2);
+  // "0821234567" -> "821234567"
+  else if (digits.startsWith("0")) digits = digits.slice(1);
+
+  // SA subscriber numbers are 9 digits; mobile prefixes start 6, 7 or 8.
+  if (!/^[678]\d{8}$/.test(digits)) return null;
+
+  return `0${digits}`;
+}
+
 export interface PayFastPaymentInput {
   orderNumber: string;
   amount: number;
@@ -117,9 +151,8 @@ export function buildPaymentData(input: PayFastPaymentInput) {
   };
 
   if (input.phone) {
-    // PayFast wants digits only, max 10 (local SA format).
-    const digits = input.phone.replace(/\D/g, "").slice(-10);
-    if (digits.length === 10) data.cell_number = digits;
+    const cell = toSaCellNumber(input.phone);
+    if (cell) data.cell_number = cell;
   }
 
   data.m_payment_id = input.orderNumber;
@@ -131,14 +164,58 @@ export function buildPaymentData(input: PayFastPaymentInput) {
     data.item_description = input.itemDescription.slice(0, 255);
   }
 
-  data.signature = generateSignature(data, config.passphrase);
+  /**
+   * Sign only when a passphrase is configured.
+   *
+   * PayFast validates `signature` against the passphrase set on the *merchant
+   * account*, not against anything in the request. The two settings have to
+   * agree in both directions: sending a signature when the account has no
+   * passphrase fails, and so does omitting one when it has.
+   *
+   * This matters in sandbox because merchant 10000100 is a shared public test
+   * account that anyone can log into and reconfigure. When someone sets a
+   * passphrase on it, every signature we compute is rejected with "Generated
+   * signature does not match submitted signature" — the request is otherwise
+   * perfectly valid, and posting it unsigned goes straight through.
+   *
+   * Live accounts are private and must always set PAYFAST_PASSPHRASE, so the
+   * guard below refuses to build an unsigned live payment rather than silently
+   * downgrading real money to an unauthenticated request.
+   */
+  if (config.passphrase) {
+    data.signature = generateSignature(data, config.passphrase);
+  } else if (!IS_SANDBOX) {
+    throw new Error(
+      "PAYFAST_PASSPHRASE is required in live mode: refusing to send an unsigned payment.",
+    );
+  }
 
   return data;
 }
 
-/** Re-compute the signature over an ITN payload and compare. */
+/**
+ * Re-compute the signature over an ITN payload and compare.
+ *
+ * Mirrors the send side: the comparison is only meaningful when a passphrase is
+ * configured, because that is the shared secret it rests on.
+ *
+ *  - Live, no passphrase  -> reject. `buildPaymentData()` makes this state
+ *    unreachable, and failing closed is the right default if it ever happens.
+ *  - Sandbox, no passphrase -> cannot verify locally. Defer to the postback in
+ *    `validateItnWithPayFast()`, which asks PayFast to vouch for the payload and
+ *    is the stronger of the two checks. The notify route never skips it.
+ */
 export function verifyItnSignature(payload: Record<string, string>): boolean {
   const config = getPayFastConfig();
+
+  if (!config.passphrase) {
+    if (!IS_SANDBOX) return false;
+    console.warn(
+      "[payfast] no PAYFAST_PASSPHRASE set — skipping local ITN signature check, relying on the PayFast postback",
+    );
+    return true;
+  }
+
   const received = payload.signature;
   if (!received) return false;
 

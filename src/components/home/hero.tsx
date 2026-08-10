@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Star, ArrowRight } from "lucide-react";
+import { Star, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -21,16 +21,18 @@ const HERO_SLIDES = [
       "Smart locks, alarm systems, biometric padlocks and home automation from trusted brands. Nationwide delivery, 2-year warranty and secure PayFast checkout.",
   },
   {
-    image: "/products/hero-facial-lock.jpg",
-    alt: "3D facial recognition door lock",
+    image:
+      "/Web Photos-20260804T004405Z-1-001/Web Photos/Smart 3D Facial Recognition Door Lock.png",
+    alt: "3D facial recognition door lock on a warm studio background",
     title: "Unlock with",
     titleAccent: "Your Face.",
     description:
       "Advanced 3D facial recognition technology that works in seconds, day or night. Anti-spoof protection and multiple user management.",
   },
   {
-    image: "/products/hero-alarm-system.jpg",
-    alt: "Smart alarm system with sensors",
+    image:
+      "/Web Photos-20260804T004405Z-1-001/Web Photos/Smart Security Alarm System.png",
+    alt: "Smart alarm system panel on a warm studio background",
     title: "Complete",
     titleAccent: "Protection.",
     description:
@@ -38,18 +40,6 @@ const HERO_SLIDES = [
   },
 ];
 
-/**
- * Hero carousel driven by Framer Motion.
- *
- * Each slide crossfades in while its image slowly zooms *out* from 1.18 → 1.0
- * over the full slide duration (the Ken Burns effect). Because the zoom runs
- * for the whole time the slide is visible, the movement reads as continuous
- * rather than as a transition — the image is still drifting when the next one
- * begins to fade in.
- *
- * The headline and body copy are keyed on the slide index, so AnimatePresence
- * fades and lifts them out and brings the next pair in with a small stagger.
- */
 export function Hero() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -64,7 +54,7 @@ export function Hero() {
   const slide = HERO_SLIDES[currentSlide];
 
   return (
-    <section className="relative overflow-hidden bg-ink-900">
+    <section className="relative h-[640px] overflow-hidden bg-ink-950 sm:h-[720px] lg:h-[800px]">
       {/* Image carousel background */}
       <div className="absolute inset-0">
         <AnimatePresence initial={false}>
@@ -78,7 +68,6 @@ export function Hero() {
           >
             <motion.div
               className="absolute inset-0"
-              // Slow zoom-out for the entire time the slide is on screen.
               initial={{ scale: 1.18 }}
               animate={{ scale: 1 }}
               transition={{
@@ -92,29 +81,33 @@ export function Hero() {
                 src={slide.image}
                 alt={slide.alt}
                 sizes="100vw"
-                className="object-cover opacity-70"
+                className="object-cover opacity-80 filter saturate-[1.05]"
               />
             </motion.div>
           </motion.div>
         </AnimatePresence>
 
-        <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/80 to-ink-950/20" />
+        {/* ADJUSTED: Overlays added back, tuned down slightly (from 95%/80% originally down to 65%/35%) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-ink-950/65 via-ink-950/35 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-950/40 via-transparent to-ink-950/10" />
       </div>
 
-      <div className="container-page relative">
-        <div className="max-w-xl py-24 sm:py-32 lg:py-36">
-          <div className="mb-5 flex items-center gap-2">
+      <div className="container-page relative z-20 flex h-full items-center">
+        <div className="max-w-2xl py-20 sm:py-28 lg:py-32">
+          {/* Social Proof Pill */}
+          <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 backdrop-blur-md transition-all hover:border-white/20">
             <div className="flex" aria-hidden="true">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Star
                   key={i}
-                  size={14}
-                  className="fill-accent-400 text-accent-400"
+                  size={13}
+                  className="fill-amber-400 text-amber-400"
                 />
               ))}
             </div>
-            <span className="text-xs font-medium text-white/80">
-              438 reviews on Trustpilot
+            <div className="h-3.5 w-px bg-white/20" />
+            <span className="text-xs font-semibold tracking-wide text-white/90">
+              438 reviews on <span className="text-emerald-400">Trustpilot</span>
             </span>
           </div>
 
@@ -128,18 +121,20 @@ export function Hero() {
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             >
               <motion.h1
-                className="text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
+                className="mt-6 text-4xl font-black leading-[1.08] tracking-tight text-white sm:text-6xl lg:text-7xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.05 }}
               >
                 {slide.title}
                 <br />
-                <span className="text-brand-400">{slide.titleAccent}</span>
+                <span className="text-brand-400">
+                  {slide.titleAccent}
+                </span>
               </motion.h1>
 
               <motion.p
-                className="mt-5 max-w-md text-base leading-relaxed text-white/70"
+                className="mt-6 max-w-lg text-base font-medium leading-relaxed text-white/90 sm:text-lg drop-shadow-sm"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.18 }}
@@ -149,30 +144,36 @@ export function Hero() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/products" variant="primary" size="lg">
+          {/* Call-to-actions */}
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <ButtonLink 
+              href="/products" 
+              variant="primary" 
+              size="lg"
+              className="group transition-transform duration-300 hover:scale-[1.02]"
+            >
               Explore Products
-              <ArrowRight size={18} />
+              <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
             </ButtonLink>
             <ButtonLink
               href="/category/smart-locks"
               size="lg"
-              className="border border-white/25 bg-white/10 text-white backdrop-blur hover:bg-white/20"
+              className="border border-white/20 bg-white/10 text-white backdrop-blur-md transition-all duration-300 hover:border-white/40 hover:bg-white/20 hover:scale-[1.02]"
             >
               Shop Smart Locks
             </ButtonLink>
           </div>
 
-          {/* Slide indicators — the active one fills as a progress bar */}
-          <div className="mt-8 flex gap-2">
+          {/* Slide indicators with progress bar */}
+          <div className="mt-12 flex items-center gap-3">
             {HERO_SLIDES.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
                 aria-label={`Go to slide ${index + 1}`}
                 aria-current={index === currentSlide}
-                className="relative h-1 overflow-hidden rounded-full bg-white/25 transition-all"
-                style={{ width: index === currentSlide ? 40 : 16 }}
+                className="group relative h-1.5 overflow-hidden rounded-full bg-white/30 transition-all duration-300 hover:bg-white/50"
+                style={{ width: index === currentSlide ? 48 : 20 }}
               >
                 {index === currentSlide ? (
                   <motion.span
@@ -195,21 +196,23 @@ export function Hero() {
   );
 }
 
-/** Brand logo strip, muted so it never competes with the hero. */
 export function BrandStrip() {
   const brands = ["Tuya", "Aqara", "Hikvision", "Sonoff", "Smart Life", "Zigbee"];
 
   return (
     <section
       aria-label="Brands we stock"
-      className="border-b border-ink-200 bg-white py-7"
+      className="relative z-10 border-b border-ink-100 bg-white py-8"
     >
       <div className="container-page">
-        <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 sm:justify-between">
+        <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-widest text-ink-400 sm:text-left">
+          Trusted Brand Partners
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:justify-between">
           {brands.map((brand) => (
             <span
               key={brand}
-              className="text-lg font-semibold tracking-tight text-ink-300 transition-colors hover:text-ink-500"
+              className="text-lg font-bold tracking-tight text-ink-300 transition-all duration-300 hover:scale-105 hover:text-ink-800"
             >
               {brand}
             </span>
@@ -220,73 +223,77 @@ export function BrandStrip() {
   );
 }
 
-/**
- * Promo band — this is the third reference image folded into the home page:
- * a tall sale tile, a wide "Explore Best Selling Products" panel, and a
- * secondary sale tile. Compact enough that the page doesn't get long.
- */
 export function PromoBand() {
   return (
-    <section className="container-page py-12 sm:py-16">
-      <div className="grid gap-4 lg:grid-cols-3">
+    <section className="container-page py-16 sm:py-20">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Tall mega-sale tile */}
         <Link
           href="/products?onSale=1"
-          className="group relative flex min-h-64 flex-col justify-between overflow-hidden rounded-card bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-white"
+          className="group relative flex min-h-[300px] flex-col justify-between overflow-hidden rounded-3xl bg-brand-600 p-8 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
         >
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/70">
+          <div className="relative z-10">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-300 backdrop-blur-md">
+              <Sparkles size={12} />
               Mega Sale
-            </p>
-            <p className="mt-2 text-3xl font-extrabold leading-tight">
+            </span>
+            <p className="mt-4 text-3xl font-black leading-none tracking-tight">
               Save up to
               <br />
-              <span className="text-5xl text-accent-300">25%</span>
+              <span className="text-6xl font-black text-accent-300">
+                25%
+              </span>
             </p>
-            <p className="mt-2 text-sm text-white/80">
+            <p className="mt-3 text-sm leading-relaxed text-white/80">
               Big savings on every smart security essential
             </p>
           </div>
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold">
+
+          <span className="relative z-10 mt-6 inline-flex items-center gap-2 text-sm font-bold tracking-wide">
             Shop deals
-            <ArrowRight
-              size={16}
-              className="transition-transform group-hover:translate-x-1"
-            />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition-all duration-300 group-hover:bg-white group-hover:text-brand-700">
+              <ArrowRight
+                size={14}
+                className="transition-transform group-hover:translate-x-0.5"
+              />
+            </div>
           </span>
         </Link>
 
         {/* Wide bestseller panel */}
         <Link
           href="/bestsellers"
-          className="group relative flex min-h-64 flex-col justify-center overflow-hidden rounded-card bg-ink-100 p-8 lg:col-span-2"
+          className="group relative flex min-h-[300px] flex-col justify-center overflow-hidden rounded-3xl border border-ink-100 bg-ink-100/60 p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-ink-200 hover:shadow-xl lg:col-span-2 sm:p-10"
         >
-          <div className="relative z-10 max-w-sm">
-            <h2 className="text-2xl font-bold leading-tight text-ink-900 sm:text-3xl">
+          <div className="relative z-10 max-w-md">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-3 py-1 text-xs font-bold text-accent-700">
+              Top Rated Choices
+            </span>
+            <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight text-ink-950 sm:text-4xl">
               Explore Best
               <br />
               Selling Products
             </h2>
-            <p className="mt-3 text-sm text-ink-600">
+            <p className="mt-3 text-sm leading-relaxed text-ink-600">
               Check out our top-rated smart devices, trusted by thousands of
               South African homes and businesses.
             </p>
-            <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-accent-600">
+            <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-accent-600 transition-colors group-hover:text-accent-700">
               View All
               <ArrowRight
                 size={16}
-                className="transition-transform group-hover:translate-x-1"
+                className="transition-transform duration-300 group-hover:translate-x-1.5"
               />
             </span>
           </div>
 
-          <div className="absolute -right-6 bottom-0 top-0 hidden w-2/5 sm:block">
+          <div className="absolute -right-8 bottom-0 top-0 hidden w-2/5 transition-transform duration-500 group-hover:scale-105 sm:block">
             <Image
               fill
               src="/products/promo-bestsellers.jpg"
               alt=""
               sizes="(max-width: 1024px) 40vw, 30vw"
-              className="object-contain object-right"
+              className="object-contain object-right drop-shadow-xl"
             />
           </div>
         </Link>
@@ -295,7 +302,6 @@ export function PromoBand() {
   );
 }
 
-/** Two side-by-side "today's best deal" banners. */
 export function DealBanners() {
   const deals = [
     {
@@ -303,44 +309,47 @@ export function DealBanners() {
       subtitle: "Up to 20% Off!",
       href: "/category/smart-locks",
       image: "/products/deal-locks.jpg",
-      tone: "from-ink-800 to-ink-950",
+      tone: "bg-ink-900",
     },
     {
       title: "Alarm Systems",
       subtitle: "Up to 18% Off!",
       href: "/category/alarms-detection",
       image: "/products/deal-alarms.jpg",
-      tone: "from-accent-600 to-accent-800",
+      tone: "bg-accent-700",
     },
   ];
 
   return (
     <section className="container-page py-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         {deals.map((deal) => (
           <Link
             key={deal.href}
             href={deal.href}
-            className={`group relative flex min-h-48 flex-col justify-center overflow-hidden rounded-card bg-gradient-to-br ${deal.tone} p-7 text-white`}
+            className={`group relative flex min-h-[220px] flex-col justify-center overflow-hidden rounded-3xl ${deal.tone} p-8 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}
           >
-            <div className="relative z-10">
-              <p className="text-xs font-medium uppercase tracking-widest text-white/60">
+            <div className="relative z-10 max-w-[60%]">
+              <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-white/70">
                 Today&apos;s Best Deal
-              </p>
-              <h3 className="mt-2 text-2xl font-bold leading-tight">
+              </span>
+              <h3 className="mt-1.5 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
                 {deal.title}
               </h3>
-              <p className="text-sm text-white/80">{deal.subtitle}</p>
-              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-ink-900">
+              <p className="mt-1 text-sm font-semibold text-white/90">{deal.subtitle}</p>
+              
+              <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-ink-950 shadow-sm transition-all duration-300 group-hover:bg-white/90 group-hover:shadow-md">
                 Shop now
                 <ArrowRight
                   size={14}
-                  className="transition-transform group-hover:translate-x-0.5"
+                  className="transition-transform group-hover:translate-x-1"
                 />
               </span>
             </div>
 
-            <div className="absolute bottom-0 right-0 top-0 w-1/2 opacity-60">
+            <div className="absolute bottom-0 right-0 top-0 w-1/2 opacity-85 transition-transform duration-500 group-hover:scale-105">
+              {/* ADJUSTED: Soft dark vignette layer re-added to ensure text pops off the deal images */}
+              <div className="absolute inset-0 bg-gradient-to-r from-ink-950/40 via-transparent to-transparent z-10" />
               <Image
                 fill
                 src={deal.image}
@@ -356,32 +365,38 @@ export function DealBanners() {
   );
 }
 
-/** Dark full-width CTA that breaks up the product grids. */
 export function LifestyleCta() {
   return (
-    <section className="relative my-12 overflow-hidden bg-ink-950 sm:my-16">
+    <section className="relative my-16 overflow-hidden bg-ink-950 py-20 sm:my-20 sm:py-28">
       <div className="absolute inset-0">
         <Image
           fill
           src="/products/cta-lifestyle.jpg"
           alt=""
           sizes="100vw"
-          className="object-cover opacity-40"
+          className="object-cover opacity-65 filter saturate-[1.1]"
         />
+        {/* ADJUSTED: Overlays tuned down slightly (from original 100%/80% to 75%/45%) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-ink-950/75 via-ink-950/45 to-transparent" />
       </div>
 
-      <div className="container-page relative py-16 sm:py-20">
-        <div className="max-w-lg">
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand-400">
-            A new standard of security
-          </p>
-          <h2 className="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl">
+      <div className="container-page relative z-10">
+        <div className="max-w-xl">
+          <div className="inline-flex items-center gap-2 rounded-full bg-brand-500/20 border border-brand-500/30 px-3 py-1 backdrop-blur-md">
+            <ShieldCheck size={14} className="text-brand-400" />
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-400">
+              A new standard of security
+            </span>
+          </div>
+
+          <h2 className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
             Protect what matters with devices you can control from anywhere.
           </h2>
+
           <ButtonLink
             href="/products"
             size="lg"
-            className="mt-7 border border-white/25 bg-white/10 text-white backdrop-blur hover:bg-white/20"
+            className="mt-8 border border-white/20 bg-white/10 text-white backdrop-blur-md transition-all duration-300 hover:border-white/40 hover:bg-white/20 hover:scale-[1.02]"
           >
             Explore All Products
             <ArrowRight size={18} />
