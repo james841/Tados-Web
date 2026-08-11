@@ -290,7 +290,7 @@ export function PromoBand() {
           <div className="absolute -right-8 bottom-0 top-0 hidden w-2/5 transition-transform duration-500 group-hover:scale-105 sm:block">
             <Image
               fill
-              src="/products/promo-bestsellers.jpg"
+              src="/smart background.jpg"
               alt=""
               sizes="(max-width: 1024px) 40vw, 30vw"
               className="object-contain object-right drop-shadow-xl"
@@ -308,14 +308,14 @@ export function DealBanners() {
       title: "All Smart Locks",
       subtitle: "Up to 20% Off!",
       href: "/category/smart-locks",
-      image: "/products/deal-locks.jpg",
+      image: "/gigi.jpg",
       tone: "bg-ink-900",
     },
     {
       title: "Alarm Systems",
       subtitle: "Up to 18% Off!",
       href: "/category/alarms-detection",
-      image: "/products/deal-alarms.jpg",
+      image: "/videoframe.png",
       tone: "bg-accent-700",
     },
   ];
@@ -371,7 +371,7 @@ export function LifestyleCta() {
       <div className="absolute inset-0">
         <Image
           fill
-          src="/products/cta-lifestyle.jpg"
+          src="/smart 2.png"
           alt=""
           sizes="100vw"
           className="object-cover opacity-65 filter saturate-[1.1]"
