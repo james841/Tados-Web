@@ -88,8 +88,35 @@ export async function handleRoute(fn: () => Promise<Response>) {
       return jsonError("Not found.", 404);
     }
 
+    // A foreign key that points at a row which no longer exists. In practice
+    // this is a stale reference rather than a server fault — most often a JWT
+    // session naming a user the database no longer has — so it gets a status the
+    // client can act on instead of a bare 500.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code: string }).code === "P2003"
+    ) {
+      console.error("[api] foreign key violation", error);
+      return jsonError(
+        "That request referenced something that no longer exists. Please sign in again and retry.",
+        409,
+      );
+    }
+
     console.error("[api]", error);
-    return jsonError("Something went wrong.", 500);
+
+    // In development the message is the whole point — a bare 500 in the browser
+    // sends you hunting through terminal scrollback for the real cause.
+    return jsonError(
+      process.env.NODE_ENV === "production"
+        ? "Something went wrong."
+        : `Something went wrong: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+      500,
+    );
   }
 }
 

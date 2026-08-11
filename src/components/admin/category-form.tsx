@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { CATEGORY_ICON_NAMES } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
+import { ImageUploader } from "@/components/admin/image-uploader";
 
 /**
  * Create / edit category dialog.
@@ -268,14 +269,15 @@ export function CategoryFormDialog({
             </Field>
 
             <Field
-              label="Image URL"
+              label="Image"
               error={fieldErrors.image}
-              hint="e.g. /products/cat-smart-locks.jpg"
+              className="sm:col-span-2"
+              hint="Uploaded to Supabase Storage and compressed before upload. If there's no image, the icon below is used instead."
             >
-              <input
-                value={form.image}
-                onChange={(event) => update("image", event.target.value)}
-                className={inputClass}
+              <ImageUploader
+                folder="categories"
+                value={form.image ? [form.image] : []}
+                onChange={(urls) => update("image", urls[0] ?? "")}
               />
             </Field>
 

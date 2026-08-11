@@ -34,7 +34,14 @@ export async function POST(request: Request) {
 
     // Signed in is optional: `Order.userId` and `Address.userId` are both
     // nullable precisely so a guest can buy.
-    const user = await getCurrentUser();
+    //
+    // The id is confirmed against the database rather than taken from the
+    // session as-is. Sessions are JWTs, so the cookie keeps asserting a user id
+    // for up to 30 days after that row stops existing — a reseed or a deleted
+    // account is enough. Attaching it anyway violates the Address/Order foreign
+    // key and fails the whole checkout; treating it as a guest completes the
+    // sale, which is the outcome that matters to a shopper mid-purchase.
+    const userId = await resolveUserId();
 
     // Collapse duplicate lines before touching the database — two entries for
     // the same product would otherwise decrement stock twice and bypass the
@@ -107,7 +114,7 @@ export async function POST(request: Request) {
     const order = await prisma.$transaction(async (tx) => {
       const address = await tx.address.create({
         data: {
-          userId: user?.id ?? null,
+          userId,
           firstName: input.firstName,
           lastName: input.lastName,
           phone: input.phone,
@@ -123,7 +130,7 @@ export async function POST(request: Request) {
       const created = await tx.order.create({
         data: {
           orderNumber,
-          userId: user?.id ?? null,
+          userId,
           email: input.email.toLowerCase(),
           phone: input.phone,
           addressId: address.id,
@@ -211,4 +218,29 @@ export async function POST(request: Request) {
 
 function round2(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+/**
+ * The signed-in user's id, but only if that user still exists.
+ *
+ * One indexed lookup on a route that already runs a transaction — cheap next to
+ * silently losing a sale to a foreign key error.
+ */
+async function resolveUserId() {
+  const user = await getCurrentUser();
+  if (!user?.id) return null;
+
+  const existing = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    console.warn(
+      `[checkout] session names user ${user.id}, which is not in the database — continuing as a guest`,
+    );
+    return null;
+  }
+
+  return existing.id;
 }

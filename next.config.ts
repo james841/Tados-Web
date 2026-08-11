@@ -18,6 +18,15 @@ const nextConfig: NextConfig = {
       // Google account avatars. Required — next/image throws at runtime for any
       // host not listed here, so the header avatar cannot render without it.
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      // Supabase Storage. Admin-uploaded product and category images live here;
+      // every Supabase project's CDN host is `<ref>.supabase.co` regardless of
+      // region, so the pattern covers pasted URLs too. next/image refuses to
+      // render anything from a host it doesn't recognise, so without this line
+      // every uploaded photo 404s at runtime.
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+      },
     ],
   },
 

@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { ImageUploader } from "@/components/admin/image-uploader";
 
 /**
  * Create / edit product dialog.
@@ -37,7 +38,8 @@ type FormState = {
   stock: string;
   lowStockAt: string;
   categoryId: string;
-  imageUrl: string;
+  /** Ordered gallery URLs. The first is the card/hero image. */
+  images: string[];
   isActive: boolean;
   isFeatured: boolean;
   isBestseller: boolean;
@@ -54,7 +56,7 @@ const EMPTY: FormState = {
   stock: "0",
   lowStockAt: "5",
   categoryId: "",
-  imageUrl: "",
+  images: [],
   isActive: true,
   isFeatured: false,
   isBestseller: false,
@@ -118,7 +120,11 @@ export function ProductFormDialog({
           stock: String(body.stock ?? 0),
           lowStockAt: String(body.lowStockAt ?? 5),
           categoryId: body.categoryId ?? "",
-          imageUrl: body.images?.[0]?.url ?? "",
+          // The whole gallery, not just the first image: the form sends this
+          // list back on save, and anything dropped here would be deleted.
+          images: (body.images ?? []).map(
+            (image: { url: string }) => image.url,
+          ),
           isActive: body.isActive ?? true,
           isFeatured: body.isFeatured ?? false,
           isBestseller: body.isBestseller ?? false,
@@ -162,7 +168,7 @@ export function ProductFormDialog({
       isFeatured: form.isFeatured,
       isBestseller: form.isBestseller,
       isNewArrival: form.isNewArrival,
-      images: form.imageUrl ? [{ url: form.imageUrl, alt: form.name }] : [],
+      images: form.images.map((url) => ({ url, alt: form.name })),
     };
 
     try {
@@ -332,11 +338,18 @@ export function ProductFormDialog({
               </select>
             </Field>
 
-            <Field label="Image URL" hint="e.g. /products/lock-1.jpg">
-              <input
-                value={form.imageUrl}
-                onChange={(event) => update("imageUrl", event.target.value)}
-                className={inputClass}
+            <Field
+              label="Photos"
+              error={fieldErrors.images}
+              className="sm:col-span-2"
+              hint="Up to 10. The first is the one shown on product cards and search results — use the arrows to reorder."
+            >
+              <ImageUploader
+                folder="products"
+                multiple
+                max={10}
+                value={form.images}
+                onChange={(urls) => update("images", urls)}
               />
             </Field>
           </div>

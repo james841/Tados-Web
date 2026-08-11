@@ -11,6 +11,9 @@ import Redis from "ioredis";
 
 const REDIS_ENABLED = process.env.REDIS_ENABLED !== "false";
 
+/** Empty string counts as unset — a blank line in `.env` shouldn't dial out. */
+const REDIS_URL = process.env.REDIS_URL?.trim() || null;
+
 const globalForRedis = globalThis as unknown as {
   redis: Redis | null | undefined;
   memoryCache: Map<string, { value: string; expiresAt: number }> | undefined;
@@ -25,14 +28,21 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 function createClient(): Redis | null {
-  if (!REDIS_ENABLED) return null;
+  // No URL means no Redis was ever configured. Returning null here is what
+  // keeps the console quiet: previously this dialled localhost:6379 regardless
+  // and logged a connection failure on every boot, which read like a bug when
+  // it was really just "you don't have Redis installed".
+  if (!REDIS_ENABLED || !REDIS_URL) return null;
 
   try {
-    const client = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", {
+    const client = new Redis(REDIS_URL, {
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
-      connectTimeout: 1_000,
+      // Generous enough for a managed host across the Atlantic. A local server
+      // answers in single-digit milliseconds, so this only ever costs time when
+      // the host is genuinely unreachable — and the cache falls back anyway.
+      connectTimeout: 10_000,
       retryStrategy(times) {
         // Stop hammering a server that clearly is not there.
         if (times > 3) return null;
@@ -47,12 +57,24 @@ function createClient(): Redis | null {
     });
 
     client.connect().catch(() => {
-      console.warn("[redis] unavailable — falling back to in-memory cache");
+      console.warn(
+        `[redis] could not reach ${safeHost(REDIS_URL)} — using the in-memory cache instead. The site works; it just re-queries the database more often.`,
+      );
     });
 
     return client;
   } catch {
     return null;
+  }
+}
+
+/** Host and port only — never log the password embedded in a Redis URL. */
+function safeHost(url: string) {
+  try {
+    const { hostname, port } = new URL(url);
+    return port ? `${hostname}:${port}` : hostname;
+  } catch {
+    return "the configured Redis host";
   }
 }
 

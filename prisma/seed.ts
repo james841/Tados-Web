@@ -643,9 +643,10 @@ async function seedCategories() {
         name: parent.name,
         description: parent.description,
         icon: parent.icon,
-        image: parent.image,
         position: index,
         featured: true,
+        // `image` is deliberately absent, like `featured` below: once an admin
+        // uploads a real tile, re-seeding must not put the placeholder path back.
       },
       create: {
         name: parent.name,
@@ -666,11 +667,11 @@ async function seedCategories() {
           name: child.name,
           description: child.description,
           icon: child.icon,
-          image: child.image,
           position: childIndex,
           parentId: created.id,
-          // `featured` is deliberately absent: it's the admin's "Show on
-          // homepage" toggle, so re-seeding must not undo their choices.
+          // `featured` and `image` are deliberately absent: both are admin-owned
+          // (the "Show on homepage" toggle and the uploaded tile), so re-seeding
+          // must not undo their choices.
         },
         create: {
           name: child.name,
@@ -751,16 +752,24 @@ async function seedProducts(
       create: data,
     });
 
-    // Replace images so re-runs don't accumulate duplicates.
-    await prisma.productImage.deleteMany({ where: { productId: saved.id } });
-    await prisma.productImage.createMany({
-      data: product.images.map((url, position) => ({
-        productId: saved.id,
-        url,
-        alt: `${product.name} — view ${position + 1}`,
-        position,
-      })),
+    // Only seed the gallery when there isn't one. Deleting and recreating would
+    // avoid duplicates on re-run, but it would also throw away photos uploaded
+    // from the admin (or migrated to the bucket) and restore the placeholder
+    // paths — which is a re-seed silently breaking every product image.
+    const existingImages = await prisma.productImage.count({
+      where: { productId: saved.id },
     });
+
+    if (existingImages === 0) {
+      await prisma.productImage.createMany({
+        data: product.images.map((url, position) => ({
+          productId: saved.id,
+          url,
+          alt: `${product.name} — view ${position + 1}`,
+          position,
+        })),
+      });
+    }
   }
 
   console.log(`  products: ${PRODUCTS.length}`);
