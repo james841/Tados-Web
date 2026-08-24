@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-import { cn, formatPrice, compactNumber, discountPercent } from "@/lib/utils";
+import { cn, compactNumber, discountPercent } from "@/lib/utils";
 
 /* ---------------------------------------------------------------
    Button — renders as <button>, or <Link> when `href` is supplied.
@@ -94,7 +94,6 @@ export function ButtonLink({
 const BADGE_TONES = {
   sale: "bg-accent-500 text-white",
   new: "bg-brand-600 text-white",
-  best: "bg-ink-900 text-white",
   neutral: "bg-white/90 text-ink-900 ring-1 ring-ink-200",
   muted: "bg-ink-100 text-ink-700",
 } as const;
@@ -122,45 +121,17 @@ export function Badge({
 }
 
 /* ---------------------------------------------------------------
-   Price — shows the strike-through original when on sale.
+   Price — re-exported so the ~8 existing `from "@/components/ui"`
+   imports keep working. It now lives in its own client module
+   because it reads the visitor's display currency from context, and
+   this barrel is imported by Server Components too.
    --------------------------------------------------------------- */
 
-export function Price({
-  price,
-  compareAtPrice,
-  size = "md",
-  className,
-}: {
-  price: number;
-  compareAtPrice?: number | null;
-  size?: "sm" | "md" | "lg" | "xl";
-  className?: string;
-}) {
-  const sizes = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-xl",
-    xl: "text-3xl sm:text-4xl",
-  };
-
-  return (
-    <div className={cn("flex items-baseline gap-2", className)}>
-      <span className={cn("font-bold text-ink-900", sizes[size])}>
-        {formatPrice(price)}
-      </span>
-      {compareAtPrice && compareAtPrice > price ? (
-        <span
-          className={cn(
-            "text-ink-400 line-through",
-            size === "xl" ? "text-lg" : "text-xs",
-          )}
-        >
-          {formatPrice(compareAtPrice)}
-        </span>
-      ) : null}
-    </div>
-  );
-}
+export {
+  Price,
+  CurrencyAmount,
+  CurrencyNotice,
+} from "@/components/currency/price";
 
 /* ---------------------------------------------------------------
    Star rating
@@ -210,7 +181,7 @@ export function StarRating({
 }
 
 /* ---------------------------------------------------------------
-   Section heading — "Best Seller Products    View all →"
+   Section heading — a title, optional subtitle and a "View all →" link.
    --------------------------------------------------------------- */
 
 export function SectionHeading({

@@ -6,11 +6,11 @@ import { Suspense } from "react";
 import { RegisterForm } from "@/components/auth/register-form";
 import { Logo } from "@/components/layout/logo";
 import { auth } from "@/lib/auth";
+import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Create an account",
-  description:
-    "Create your Tados Web account to track orders, save a wishlist and check out faster.",
+  description: `Create your ${SITE.name} account to track orders, save a wishlist and check out faster.`,
   robots: { index: false, follow: false },
 };
 

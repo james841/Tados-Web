@@ -6,8 +6,7 @@ import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "All Products — Smart Locks, Alarms & Automation",
-  description:
-    "Browse the full Tados Web range: 3D facial recognition door locks, fingerprint locks, smart padlocks, alarm systems, Zigbee switches, ceiling speakers and curtain kits. Delivered across South Africa.",
+  description: `Browse the full ${SITE.name} range: 3D facial recognition door locks, fingerprint locks, smart padlocks, alarm systems, Zigbee switches, ceiling speakers and curtain kits. Delivered across South Africa.`,
   alternates: { canonical: "/products" },
   openGraph: {
     title: `All Products | ${SITE.name}`,

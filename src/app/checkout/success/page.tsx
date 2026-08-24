@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CheckCircle2, Clock, Package } from "lucide-react";
 
 import { ClearCartOnMount } from "@/components/checkout/clear-cart-on-mount";
+import { InstallationOffer } from "@/components/checkout/installation-offer";
 import { ButtonLink, EmptyState } from "@/components/ui";
 import { devConfirmOrder, devSettlementAllowed } from "@/lib/dev-settle";
 import { prisma } from "@/lib/prisma";
@@ -160,7 +161,7 @@ export default async function CheckoutSuccessPage({
             label="Shipping"
             value={
               toNumber(order.shipping) === 0
-                ? "Free"
+                ? "Included"
                 : formatPrice(toNumber(order.shipping))
             }
           />
@@ -192,6 +193,34 @@ export default async function CheckoutSuccessPage({
           </div>
         ) : null}
       </div>
+
+      {/* The installation offer, only once the money is actually in. Offering to
+          book a technician against an order PayFast hasn't confirmed would mean
+          quoting for a sale that may still fail. */}
+      {paid ? (
+        <InstallationOffer
+          order={{
+            orderNumber: order.orderNumber,
+            customerName: order.address
+              ? `${order.address.firstName} ${order.address.lastName}`
+              : order.email,
+            total: toNumber(order.total),
+            items: order.items.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+            })),
+            address: order.address
+              ? {
+                  line1: order.address.line1,
+                  line2: order.address.line2,
+                  city: order.address.city,
+                  province: order.address.province,
+                  postalCode: order.address.postalCode,
+                }
+              : null,
+          }}
+        />
+      ) : null}
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <ButtonLink href="/account" variant="dark">

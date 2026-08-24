@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Headphones, ShieldCheck, Truck, Wrench } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui";
-import { SITE, TRUST_BADGES } from "@/lib/constants";
+import { CITIES_SENTENCE, SITE, TRUST_BADGES } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -93,12 +93,11 @@ export default function AboutPage() {
 
       <section className="mt-12">
         <h2 className="text-xl font-bold text-ink-900">Where to find us</h2>
+        <p className="mt-4 text-sm leading-relaxed text-ink-600">
+          We deliver nationwide. Our installation teams are based in{" "}
+          {CITIES_SENTENCE}, South Africa.
+        </p>
         <address className="mt-4 not-italic text-sm leading-relaxed text-ink-600">
-          {SITE.address.street}
-          <br />
-          {SITE.address.city}, {SITE.address.province}{" "}
-          {SITE.address.postalCode}
-          <br />
           <a
             href={`mailto:${SITE.email}`}
             className="font-semibold text-brand-700 hover:underline"
@@ -112,6 +111,8 @@ export default function AboutPage() {
           >
             {SITE.phone}
           </a>
+          <br />
+          <span className="text-ink-500">{SITE.operatingHours}</span>
         </address>
 
         <div className="mt-8 flex flex-wrap gap-3">

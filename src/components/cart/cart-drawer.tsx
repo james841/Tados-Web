@@ -6,9 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { ButtonLink } from "@/components/ui";
-import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
-import { cn, formatPrice } from "@/lib/utils";
+import { ButtonLink, CurrencyAmount, CurrencyNotice } from "@/components/ui";
+import { DELIVERY_PROMISE } from "@/lib/constants";
 import { selectCartSubtotal, useCart, type CartItem } from "@/store/cart";
 
 /**
@@ -43,10 +42,6 @@ export function CartDrawer() {
   const [note, setNote] = useState("");
 
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
-  const remainingForFreeShipping = Math.max(
-    0,
-    FREE_SHIPPING_THRESHOLD - subtotal,
-  );
 
   // Lock background scroll while the panel is up. Restoring the previous value
   // rather than clearing it avoids fighting any other scroll lock.
@@ -166,7 +161,6 @@ export function CartDrawer() {
 
                 <CartFooter
                   subtotal={subtotal}
-                  remainingForFreeShipping={remainingForFreeShipping}
                   note={note}
                   noteOpen={noteOpen}
                   onNoteChange={setNote}
@@ -221,7 +215,7 @@ function CartRow({ item }: { item: CartItem }) {
         </Link>
 
         <p className="mt-1 text-sm font-bold text-ink-900">
-          {formatPrice(item.price)}
+          <CurrencyAmount value={item.price} />
         </p>
         <p className="mt-0.5 text-xs text-ink-500">SKU · {item.sku}</p>
 
@@ -297,7 +291,6 @@ function StepperButton({
 
 function CartFooter({
   subtotal,
-  remainingForFreeShipping,
   note,
   noteOpen,
   onNoteChange,
@@ -305,57 +298,27 @@ function CartFooter({
   onNavigate,
 }: {
   subtotal: number;
-  remainingForFreeShipping: number;
   note: string;
   noteOpen: boolean;
   onNoteChange: (value: string) => void;
   onToggleNote: () => void;
   onNavigate: () => void;
 }) {
-  const qualifies = remainingForFreeShipping <= 0;
-  const progress = Math.min(
-    100,
-    (subtotal / FREE_SHIPPING_THRESHOLD) * 100,
-  );
-
   return (
     <div className="border-t border-ink-200 px-5 py-5">
-      {/* Free-shipping nudge — the single most effective place for it. */}
-      <div className="mb-4">
-        <p className="flex items-center gap-2 text-xs text-ink-600">
-          <Truck size={14} className="shrink-0 text-ink-400" />
-          {qualifies ? (
-            <span className="font-medium text-green-700">
-              Your order ships free
-            </span>
-          ) : (
-            <span>
-              Add{" "}
-              <strong className="text-ink-900">
-                {formatPrice(remainingForFreeShipping)}
-              </strong>{" "}
-              more for free shipping
-            </span>
-          )}
-        </p>
-
-        <div
-          className="mt-2 h-1 overflow-hidden rounded-full bg-ink-100"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(progress)}
-          aria-label="Progress toward free shipping"
-        >
-          <div
-            className={cn(
-              "h-full rounded-full transition-all duration-500",
-              qualifies ? "bg-green-600" : "bg-brand-600",
-            )}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
+      {/* Delivery promise.
+          This used to be a "spend R X more for free shipping" progress bar. The
+          free-shipping claim was removed on the client's instruction — the
+          Shipping Policy only commits to nationwide delivery in a stated window,
+          so that's what we say here, linked to the policy itself. */}
+      <Link
+        href="/shipping"
+        onClick={onNavigate}
+        className="group mb-4 flex items-center gap-2 text-xs text-ink-600 transition-colors hover:text-ink-900"
+      >
+        <Truck size={14} className="shrink-0 text-ink-400" />
+        <span className="group-hover:underline">{DELIVERY_PROMISE}</span>
+      </Link>
 
       <div className="flex items-baseline justify-between">
         <div>
@@ -365,9 +328,11 @@ function CartFooter({
           </p>
         </div>
         <p className="text-lg font-bold tabular-nums text-ink-900">
-          {formatPrice(subtotal)}
+          <CurrencyAmount value={subtotal} />
         </p>
       </div>
+
+      <CurrencyNotice className="mt-2" />
 
       <button
         type="button"

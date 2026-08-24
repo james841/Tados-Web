@@ -2,13 +2,22 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Trash2, ShoppingBag } from "lucide-react";
+import { Trash2, ShoppingBag, Truck } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 
 import { useCart, selectCartCount, selectCartSubtotal } from "@/store/cart";
-import { ButtonLink, EmptyState, Price } from "@/components/ui";
-import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from "@/lib/constants";
+import {
+  ButtonLink,
+  CurrencyNotice,
+  EmptyState,
+  Price,
+} from "@/components/ui";
+import {
+  DELIVERY_PROMISE,
+  FREE_SHIPPING_THRESHOLD,
+  STANDARD_SHIPPING_FEE,
+} from "@/lib/constants";
 
 /**
  * Cart view with inline quantity controls and a "Clear cart" button that
@@ -25,6 +34,10 @@ export function CartView() {
   const shipping =
     subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
   const total = subtotal + shipping;
+  // NOTE: the R1 500 threshold is still what the checkout API charges
+  // (api/checkout/route.ts). Only the promotional "free shipping" wording was
+  // removed — dropping the rule itself would silently raise the price of every
+  // large order, which isn't what was asked for.
 
   function handleClearCart() {
     if (!session?.user) {
@@ -181,25 +194,27 @@ export function CartView() {
             <div className="flex justify-between">
               <span className="text-ink-600">Shipping</span>
               {shipping === 0 ? (
-                <span className="font-semibold text-brand-700">Free</span>
+                <span className="font-semibold text-ink-900">Included</span>
               ) : (
                 <Price price={shipping} />
               )}
             </div>
           </div>
 
-          {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD ? (
-            <p className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">
-              Add <Price price={FREE_SHIPPING_THRESHOLD - subtotal} /> more for
-              free shipping
-            </p>
-          ) : null}
+          <Link
+            href="/shipping"
+            className="mt-3 flex items-center gap-2 rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600 transition-colors hover:text-ink-900"
+          >
+            <Truck size={14} className="shrink-0 text-ink-400" />
+            <span className="hover:underline">{DELIVERY_PROMISE}</span>
+          </Link>
 
           <div className="mt-4 border-t border-ink-200 pt-4">
             <div className="flex items-baseline justify-between">
               <span className="font-semibold text-ink-900">Total</span>
               <Price price={total} className="text-2xl font-bold" />
             </div>
+            <CurrencyNotice className="mt-2" />
           </div>
 
           <ButtonLink

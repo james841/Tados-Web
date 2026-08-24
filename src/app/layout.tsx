@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Providers } from "@/components/providers";
 import { SITE } from "@/lib/constants";
+import { resolveCurrency } from "@/lib/currency";
+import { CURRENCY_COOKIE } from "@/lib/currency-shared";
 import { getCategoryTree } from "@/lib/queries";
 
 export const metadata: Metadata = {
@@ -92,14 +95,20 @@ function OrganisationSchema() {
         logo: `${SITE.url}/logo.png`,
         email: SITE.email,
         telephone: SITE.phone,
+        /* No streetAddress: we don't publish one, and inventing it for the sake
+           of a complete PostalAddress would put a false address in structured
+           data that Google surfaces verbatim. City + region + country is valid
+           on its own. */
         address: {
           "@type": "PostalAddress",
-          streetAddress: SITE.address.street,
           addressLocality: SITE.address.city,
           addressRegion: SITE.address.province,
-          postalCode: SITE.address.postalCode,
           addressCountry: SITE.address.country,
         },
+        areaServed: SITE.cities.map((city) => ({
+          "@type": "City",
+          name: city,
+        })),
       },
       {
         "@type": "WebSite",
@@ -135,11 +144,24 @@ function OrganisationSchema() {
  * rather than a hardcoded list — an admin adding a category should see it in
  * the menu, not just on the homepage. The query is Redis-cached for an hour and
  * invalidated on every category write, so this costs nothing per request.
+ *
+ * The display currency is resolved here too, from the edge geo header plus any
+ * manual override cookie. Doing it once at the root means every price on the
+ * page agrees, and no component has to fetch a rate of its own.
  */
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const categories = await getCategoryTree();
+  const [categories, requestHeaders, cookieStore] = await Promise.all([
+    getCategoryTree(),
+    headers(),
+    cookies(),
+  ]);
+
+  const { currency, rate, available } = await resolveCurrency(
+    requestHeaders,
+    cookieStore.get(CURRENCY_COOKIE)?.value,
+  );
 
   return (
     <html lang="en-ZA">
@@ -148,7 +170,11 @@ export default async function RootLayout({
         <OrganisationSchema />
       </head>
       <body className="flex min-h-screen flex-col antialiased">
-        <Providers>
+        <Providers
+          currency={currency}
+          rate={rate}
+          availableCurrencies={available}
+        >
           <a
             href="#main"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white"

@@ -1,9 +1,22 @@
-import { ExternalLink, Mail, MapPin, Phone } from "lucide-react";
+import {
+  ExternalLink,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+} from "lucide-react";
 
-import { SITE } from "@/lib/constants";
+import {
+  CITIES_SENTENCE,
+  DELIVERY_PROMISE,
+  FREE_SHIPPING_THRESHOLD,
+  SITE,
+  STANDARD_SHIPPING_FEE,
+  VAT_RATE,
+} from "@/lib/constants";
 
 export const metadata = {
-  title: "Settings · Admin · Tados",
+  title: `Settings · Admin · ${SITE.shortName}`,
   robots: { index: false, follow: false },
 };
 
@@ -41,9 +54,16 @@ export default function AdminSettingsPage() {
           <Row label="Support email" value={SITE.email} icon={<Mail size={15} />} />
           <Row label="Phone" value={SITE.phone} icon={<Phone size={15} />} />
           <Row
-            label="Address"
-            value={`${SITE.address.street}, ${SITE.address.city}, ${SITE.address.province} ${SITE.address.postalCode}`}
+            label="WhatsApp"
+            value={`+${SITE.whatsapp}`}
+            icon={<MessageCircle size={15} />}
+            note="Installation requests are sent here. Set NEXT_PUBLIC_WHATSAPP_NUMBER to change it."
+          />
+          <Row
+            label="Operating areas"
+            value={`${CITIES_SENTENCE}, South Africa`}
             icon={<MapPin size={15} />}
+            note="Delivery is nationwide; installation is city-based"
           />
         </dl>
       </section>
@@ -55,21 +75,25 @@ export default function AdminSettingsPage() {
 
         <dl className="divide-y divide-ink-100 text-sm">
           <Row
-            label="Free shipping threshold"
-            value="R1 500"
-            note="Free standard delivery above this order total"
+            label="Standard shipping"
+            value={`R${STANDARD_SHIPPING_FEE}`}
+            note={DELIVERY_PROMISE}
           />
           <Row
-            label="Standard shipping"
-            value="R120"
-            note="Nationwide, 2–4 working days"
+            label="Shipping waived above"
+            value={`R${FREE_SHIPPING_THRESHOLD.toLocaleString("en-ZA")}`}
+            note="Internal pricing rule only — not advertised to customers"
           />
           <Row
             label="VAT"
-            value="15%"
+            value={`${VAT_RATE * 100}%`}
             note="Included in all displayed prices"
           />
-          <Row label="Currency" value="ZAR (South African Rand)" />
+          <Row
+            label="Settlement currency"
+            value="ZAR (South African Rand)"
+            note="Visitors abroad see a converted guide price; every order is charged in rand"
+          />
         </dl>
       </section>
 

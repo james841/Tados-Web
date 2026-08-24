@@ -41,7 +41,7 @@ export default function GlobalError({
       >
         <div style={{ maxWidth: "32rem", textAlign: "center" }}>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>
-            Tados Web is temporarily unavailable
+            Tados Smart Technology is temporarily unavailable
           </h1>
 
           <p

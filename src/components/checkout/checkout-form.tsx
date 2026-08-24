@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
-import { Button, Price } from "@/components/ui";
+import { Button, CurrencyAmount, CurrencyNotice, Price } from "@/components/ui";
 import {
   FREE_SHIPPING_THRESHOLD,
   STANDARD_SHIPPING_FEE,
@@ -452,11 +452,12 @@ export function CheckoutForm() {
                       {item.name}
                     </span>
                     <span className="text-xs text-ink-500">
-                      Qty {item.quantity} · {formatPrice(item.price)} each
+                      Qty {item.quantity} ·{" "}
+                      <CurrencyAmount value={item.price} /> each
                     </span>
                   </span>
                   <span className="shrink-0 font-semibold tabular-nums text-ink-900">
-                    {formatPrice(item.price * item.quantity)}
+                    <CurrencyAmount value={item.price * item.quantity} />
                   </span>
                 </li>
               ))}
@@ -474,8 +475,14 @@ export function CheckoutForm() {
               ) : (
                 <Lock size={16} />
               )}
+              {/* Deliberately `formatPrice`, not the visitor's currency: this is
+                  the amount PayFast will actually charge, and PayFast settles in
+                  rand only. Everywhere else on the page may show a converted
+                  guide price — the button must not. */}
               Pay {formatPrice(total)} with PayFast
             </Button>
+
+            <CurrencyNotice className="mt-3 text-center" />
 
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-500">
               <ShieldCheck size={14} className="text-brand-600" />
@@ -503,7 +510,7 @@ export function CheckoutForm() {
                   </span>
                 </span>
                 <span className="shrink-0 tabular-nums text-ink-900">
-                  {formatPrice(item.price * item.quantity)}
+                  <CurrencyAmount value={item.price * item.quantity} />
                 </span>
               </li>
             ))}
@@ -512,14 +519,14 @@ export function CheckoutForm() {
           <div className="mt-4 space-y-2 border-t border-ink-200 pt-4 text-sm">
             <div className="flex justify-between">
               <span className="text-ink-600">Subtotal</span>
-              <Price price={subtotal} />
+              <Price price={subtotal} showBase={false} />
             </div>
             <div className="flex justify-between">
               <span className="text-ink-600">Shipping</span>
               {shipping === 0 ? (
-                <span className="font-semibold text-brand-700">Free</span>
+                <span className="font-semibold text-ink-900">Included</span>
               ) : (
-                <Price price={shipping} />
+                <Price price={shipping} showBase={false} />
               )}
             </div>
           </div>
@@ -530,6 +537,7 @@ export function CheckoutForm() {
           </div>
 
           <p className="mt-3 text-xs text-ink-500">VAT included.</p>
+          <CurrencyNotice className="mt-2" />
         </div>
       </aside>
     </div>

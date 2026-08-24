@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { SITE } from "@/lib/constants";
+import { POLICY_PAGES, SITE } from "@/lib/constants";
 import { getAllProductSlugs, getCategoryTree } from "@/lib/queries";
 
 /**
@@ -22,12 +22,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
-    },
-    {
-      url: `${SITE.url}/bestsellers`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.8,
     },
     {
       url: `${SITE.url}/new-arrivals`,
@@ -55,6 +49,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
+  /**
+   * The seven policy pages. Worth indexing rather than hiding: "how long does
+   * Tados take to deliver" and "Tados warranty" are real searches, and the FAQ
+   * page carries FAQPage structured data that only pays off once it's crawled.
+   */
+  const policyRoutes: MetadataRoute.Sitemap = POLICY_PAGES.map((page) => ({
+    url: `${SITE.url}${page.href}`,
+    lastModified: now,
+    changeFrequency: "yearly",
+    priority: page.href === "/faqs" ? 0.6 : 0.4,
+  }));
+
   // Flatten the category tree so child categories are indexed too.
   const categoryRoutes: MetadataRoute.Sitemap = categories.flatMap((parent) => [
     {
@@ -78,5 +84,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...productRoutes];
+  return [
+    ...staticRoutes,
+    ...policyRoutes,
+    ...categoryRoutes,
+    ...productRoutes,
+  ];
 }

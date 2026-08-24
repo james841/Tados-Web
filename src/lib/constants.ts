@@ -9,24 +9,62 @@
  */
 
 export const SITE = {
-  name: "Tados Web",
+  name: "Tados Smart Technology",
+  /** For tight spaces — the header lockup, breadcrumbs, order emails. */
   shortName: "Tados",
+  /** The brand line from the About copy. Used as the logo sub-lockup. */
+  tagline: "Smarter products. Simpler homes.",
+  /** Longer positioning line, for the hero and About page. */
+  promise: "Smart Living Made Simple",
   description:
-    "South Africa's smart security and automation store. Shop smart door locks, facial recognition locks, alarm systems, smart switches, ceiling speakers and curtain kits with fast delivery and secure PayFast checkout.",
+    "South African smart-home technology. Shop smart door locks, facial recognition locks, alarm systems, smart switches, ceiling speakers and curtain kits, with nationwide delivery and secure PayFast checkout.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   locale: "en_ZA",
+  /** The settlement currency. Display currency is per-visitor — see lib/currency.ts. */
   currency: "ZAR",
-  twitter: "@tadosweb",
-  email: "support@tadosweb.co.za",
+  twitter: "@tadossmart",
+  email: "support@tadossmart.co.za",
+  salesEmail: "sales@tadossmart.co.za",
+  returnsEmail: "returns@tadossmart.co.za",
+  privacyEmail: "privacy@tadossmart.co.za",
   phone: "+27 11 000 0000",
+  /**
+   * WhatsApp destination for installation requests, digits only with country
+   * code — wa.me rejects spaces and a leading +.
+   *
+   * Placeholder until the real number is supplied: set
+   * NEXT_PUBLIC_WHATSAPP_NUMBER in .env and every surface picks it up.
+   */
+  whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "27000000000",
+  operatingHours: "Mon–Fri, 08:00–17:00 SAST",
+  /**
+   * Where the business operates. Kept as a list because it appears in the
+   * footer, contact page, About, FAQ and the Installation Support Policy — one
+   * source stops those drifting apart.
+   */
+  cities: ["Pretoria", "Durban"] as const,
   address: {
-    street: "12 Innovation Drive",
-    city: "Johannesburg",
+    city: "Pretoria",
     province: "Gauteng",
-    postalCode: "2196",
     country: "ZA",
   },
 } as const;
+
+/** "Pretoria and Durban" — for sentences. */
+export const CITIES_SENTENCE = "Pretoria and Durban";
+/** "Pretoria | Durban" — for the About page's location strip. */
+export const CITIES_DIVIDED = SITE.cities.join(" | ");
+
+/**
+ * A wa.me link with a pre-filled message.
+ *
+ * wa.me wants digits only — no `+`, no spaces — and the text URL-encoded. Both
+ * are easy to get wrong by hand, so every WhatsApp entry point goes through here.
+ */
+export function whatsappLink(message?: string): string {
+  const base = `https://wa.me/${SITE.whatsapp}`;
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+}
 
 /**
  * Category tree — the reference taxonomy.
@@ -179,7 +217,15 @@ export type SortOption = (typeof SORT_OPTIONS)[number]["value"];
 
 export const PRODUCTS_PER_PAGE = 12;
 
-/** Free delivery above this rand value. */
+/**
+ * Shipping economics.
+ *
+ * The threshold still exists because checkout has to price delivery, but no
+ * customer-facing surface advertises "free shipping over R…" any more — the
+ * Shipping Policy makes any free-delivery promotion conditional, so promising it
+ * in a header badge would contradict the policy. `FREE_SHIPPING_THRESHOLD` is
+ * now purely an internal pricing rule.
+ */
 export const FREE_SHIPPING_THRESHOLD = 1500;
 export const STANDARD_SHIPPING_FEE = 120;
 /** South African VAT, already included in displayed prices. */
@@ -205,20 +251,70 @@ export const ORDER_STATUS_STYLES: Record<string, string> = {
   REFUNDED: "bg-ink-100 text-ink-700 ring-ink-600/20",
 };
 
+/**
+ * The three reassurance tiles in the footer and on product pages.
+ *
+ * Deliberately free of numbers we can't stand behind: the delivery window is
+ * the one in the Shipping Policy, and the warranty tile no longer claims a
+ * fixed term because cover is statutory plus whatever the manufacturer offers,
+ * which varies per product. `href` sends a curious shopper to the policy that
+ * governs the claim rather than leaving it as decoration.
+ */
 export const TRUST_BADGES = [
   {
     icon: "Truck",
-    title: "Free shipping over R1 500",
-    description: "Nationwide delivery in 2–4 working days",
+    title: "Nationwide delivery",
+    description: "Anywhere in South Africa in 3–7 working days",
+    href: "/shipping",
   },
   {
     icon: "ShieldCheck",
-    title: "2-year warranty",
-    description: "Manufacturer-backed on every device",
+    title: "Warranty",
+    description: "Statutory cover plus manufacturer warranty where applicable",
+    href: "/warranty",
   },
   {
     icon: "RotateCcw",
-    title: "30-day returns",
-    description: "Free and easy return policy",
+    title: "Returns & exchanges",
+    description: "Clear process for defective, wrong or damaged items",
+    href: "/returns",
   },
 ] as const;
+
+/**
+ * The one place the delivery window is written.
+ *
+ * Item 6 of the client's corrections: the "free shipping over R1 500" claim is
+ * gone and this is what replaces it everywhere. Matching the Shipping Policy
+ * exactly ("3–7 business days") matters — a badge promising something shorter
+ * than the policy is the kind of mismatch that turns into a CPA complaint.
+ */
+export const DELIVERY_PROMISE = "Nationwide delivery in 3–7 working days";
+export const DELIVERY_WINDOW = "3–7 working days";
+
+/**
+ * Legal and support pages, grouped as the footer renders them.
+ *
+ * Every entry has a real page behind it. Previously the footer linked to seven
+ * routes that did not exist, so a shopper looking for the returns policy hit a
+ * 404 — which is worse than not linking it at all.
+ */
+export const POLICY_PAGES = [
+  { label: "Shipping Policy", href: "/shipping" },
+  { label: "Warranty", href: "/warranty" },
+  { label: "Returns & Refunds", href: "/returns" },
+  { label: "Installation Support", href: "/installation" },
+  { label: "Terms & Conditions", href: "/terms" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "FAQs", href: "/faqs" },
+] as const;
+
+/**
+ * Shown at the top of every policy page.
+ *
+ * Hardcoded rather than `new Date()` — a "last updated" that silently tracks
+ * today's date is worse than none: it tells a customer the terms changed when
+ * they didn't, and it makes the page non-deterministic to prerender. Bump it by
+ * hand when a policy actually changes.
+ */
+export const POLICY_LAST_UPDATED = "August 2026";

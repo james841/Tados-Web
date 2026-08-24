@@ -7,11 +7,11 @@ import { ShieldAlert } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Logo } from "@/components/layout/logo";
 import { auth } from "@/lib/auth";
+import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description:
-    "Sign in to your Tados Web account to track orders, save a wishlist and check out faster.",
+  description: `Sign in to your ${SITE.name} account to track orders, save a wishlist and check out faster.`,
   robots: { index: false, follow: false },
 };
 
@@ -65,7 +65,7 @@ export default async function LoginPage({
           </Suspense>
 
           <p className="mt-6 text-center text-sm text-ink-500">
-            New to Tados Web?{" "}
+            New to {SITE.shortName}?{" "}
             <Link
               href="/register"
               className="font-semibold text-brand-700 hover:underline"

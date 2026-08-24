@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import Link from "next/link";
+import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 
-import { SITE } from "@/lib/constants";
+import {
+  CITIES_SENTENCE,
+  DELIVERY_PROMISE,
+  SITE,
+  whatsappLink,
+} from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Contact Us",
-  description: `Reach ${SITE.name} about orders, deliveries, support or trade enquiries. ${SITE.phone} · ${SITE.email}`,
+  description: `Reach ${SITE.name} about orders, deliveries, installation or trade enquiries. ${SITE.phone} · ${SITE.email}`,
   alternates: { canonical: "/contact" },
 };
 
@@ -15,31 +21,32 @@ const CHANNELS = [
     title: "Call us",
     lines: [SITE.phone],
     href: `tel:${SITE.phone.replace(/\s/g, "")}`,
-    note: "Mon–Fri, 08:00–17:00 SAST",
+    note: SITE.operatingHours,
+  },
+  {
+    icon: MessageCircle,
+    title: "WhatsApp",
+    lines: ["Message us about installation or a product"],
+    href: whatsappLink("Hi Tados Smart Technology, I have a question about"),
+    note: "Fastest route to a human",
   },
   {
     icon: Mail,
     title: "Email",
-    lines: [SITE.email, "Trade: trade@tadosweb.co.za"],
+    lines: [SITE.email, `Sales: ${SITE.salesEmail}`],
     href: `mailto:${SITE.email}`,
     note: "Replies within one working day",
   },
   {
     icon: MapPin,
-    title: "Visit",
-    lines: [
-      SITE.address.street,
-      `${SITE.address.city}, ${SITE.address.province} ${SITE.address.postalCode}`,
-    ],
-    note: "Collection by appointment",
+    title: "Where we are",
+    lines: [`${CITIES_SENTENCE}, South Africa`, "Delivery nationwide"],
+    note: "Collection and installation by appointment",
   },
   {
     icon: Clock,
     title: "Order status",
-    lines: [
-      "Paid orders dispatch within 1–2 working days",
-      "Nationwide delivery in 2–4 working days",
-    ],
+    lines: ["Paid orders dispatch within 1–2 working days", DELIVERY_PROMISE],
     note: "Track your order in My Account",
   },
 ];
@@ -77,6 +84,9 @@ export default function ContactPage() {
                     <a
                       href={channel.href}
                       className="font-medium text-brand-700 hover:underline"
+                      {...(channel.href.startsWith("https://wa.me")
+                        ? { target: "_blank", rel: "noopener noreferrer" }
+                        : {})}
                     >
                       {line}
                     </a>
@@ -111,11 +121,28 @@ export default function ContactPage() {
             page before writing in.
           </li>
           <li>
+            <strong className="font-semibold text-ink-900">Warranty:</strong>{" "}
+            cover and the claim process are set out in our{" "}
+            <Link
+              href="/warranty"
+              className="font-semibold text-brand-700 hover:underline"
+            >
+              warranty policy
+            </Link>
+            . Keep your order number handy.
+          </li>
+          <li>
             <strong className="font-semibold text-ink-900">
-              Warranty:
+              Installation:
             </strong>{" "}
-            every device carries a 2-year manufacturer-backed warranty. Keep
-            your order number handy.
+            see{" "}
+            <Link
+              href="/installation"
+              className="font-semibold text-brand-700 hover:underline"
+            >
+              installation support
+            </Link>{" "}
+            for what we fit, where, and what it costs.
           </li>
         </ul>
       </section>

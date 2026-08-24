@@ -4,14 +4,9 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { X, SlidersHorizontal } from "lucide-react";
 import { useState, useTransition } from "react";
 
+import { useCurrency } from "@/components/currency/currency-provider";
 import { SORT_OPTIONS } from "@/lib/constants";
-import { cn, formatPrice } from "@/lib/utils";
-
-interface BrandOption {
-  id: string;
-  name: string;
-  slug: string;
-}
+import { cn } from "@/lib/utils";
 
 /**
  * Catalogue filter sidebar.
@@ -20,13 +15,17 @@ interface BrandOption {
  * filtered view shareable, back-button friendly and server-rendered. Updates
  * are pushed inside a transition with `scroll: false`, so the grid re-renders
  * on the server without the page jumping or flashing.
+ *
+ * There is deliberately no brand filter. It was removed on the client's
+ * instruction, and the catalogue is small enough that filtering by brand mostly
+ * produced one- or two-product results — price and availability are the useful
+ * axes here. `Brand` still exists on the product record and on the admin form;
+ * it is simply not a shopper-facing facet.
  */
 export function ProductFilters({
-  brands,
   priceRange,
   className,
 }: {
-  brands: BrandOption[];
   priceRange: { min: number; max: number };
   className?: string;
 }) {
@@ -35,18 +34,17 @@ export function ProductFilters({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // The price hints follow the visitor's display currency; the inputs stay in
+  // rand because that's what the query filters on.
+  const { format } = useCurrency();
 
-  const selectedBrands = searchParams.getAll("brand");
   const onSale = searchParams.get("onSale") === "1";
   const inStock = searchParams.get("inStock") === "1";
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
 
   const activeCount =
-    selectedBrands.length +
-    (onSale ? 1 : 0) +
-    (inStock ? 1 : 0) +
-    (minPrice || maxPrice ? 1 : 0);
+    (onSale ? 1 : 0) + (inStock ? 1 : 0) + (minPrice || maxPrice ? 1 : 0);
 
   function applyParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
@@ -56,17 +54,6 @@ export function ProductFilters({
 
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
-    });
-  }
-
-  function toggleBrand(slug: string) {
-    applyParams((params) => {
-      const current = params.getAll("brand");
-      params.delete("brand");
-      const next = current.includes(slug)
-        ? current.filter((b) => b !== slug)
-        : [...current, slug];
-      next.forEach((b) => params.append("brand", b));
     });
   }
 
@@ -86,7 +73,7 @@ export function ProductFilters({
 
   function resetAll() {
     applyParams((params) => {
-      ["brand", "onSale", "inStock", "minPrice", "maxPrice"].forEach((k) =>
+      ["onSale", "inStock", "minPrice", "maxPrice"].forEach((k) =>
         params.delete(k),
       );
     });
@@ -110,26 +97,6 @@ export function ProductFilters({
         </button>
       ) : null}
 
-      {/* Active filter chips */}
-      {selectedBrands.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {selectedBrands.map((slug) => {
-            const brand = brands.find((b) => b.slug === slug);
-            return (
-              <button
-                key={slug}
-                type="button"
-                onClick={() => toggleBrand(slug)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-3 py-1.5 text-xs font-medium text-ink-700 transition-colors hover:bg-ink-200"
-              >
-                {brand?.name ?? slug}
-                <X size={12} />
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
       <FilterGroup title="Price">
         <div className="flex items-center gap-2">
           <input
@@ -138,7 +105,7 @@ export function ProductFilters({
             defaultValue={minPrice ?? ""}
             placeholder={String(Math.floor(priceRange.min))}
             onBlur={(e) => setPrice("minPrice", e.target.value)}
-            aria-label="Minimum price"
+            aria-label="Minimum price in rand"
             className="w-full rounded-lg border border-ink-300 px-3 py-2 text-sm outline-none focus:border-brand-600"
           />
           <span className="text-ink-400">–</span>
@@ -148,31 +115,14 @@ export function ProductFilters({
             defaultValue={maxPrice ?? ""}
             placeholder={String(Math.ceil(priceRange.max))}
             onBlur={(e) => setPrice("maxPrice", e.target.value)}
-            aria-label="Maximum price"
+            aria-label="Maximum price in rand"
             className="w-full rounded-lg border border-ink-300 px-3 py-2 text-sm outline-none focus:border-brand-600"
           />
         </div>
         <p className="mt-2 text-xs text-ink-500">
-          In stock from {formatPrice(priceRange.min)} to{" "}
-          {formatPrice(priceRange.max)}
+          In stock from {format(priceRange.min)} to {format(priceRange.max)}
         </p>
       </FilterGroup>
-
-      {brands.length > 0 ? (
-        <FilterGroup title="Brand">
-          <ul className="space-y-2.5">
-            {brands.map((brand) => (
-              <li key={brand.id}>
-                <Checkbox
-                  checked={selectedBrands.includes(brand.slug)}
-                  onChange={() => toggleBrand(brand.slug)}
-                  label={brand.name}
-                />
-              </li>
-            ))}
-          </ul>
-        </FilterGroup>
-      ) : null}
 
       <FilterGroup title="Availability">
         <div className="space-y-2.5">

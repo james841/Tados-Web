@@ -10,16 +10,6 @@ import { useCart } from "@/store/cart";
 import { cn } from "@/lib/utils";
 import { Badge, Price, StarRating, SaleBadge } from "@/components/ui";
 
-/**
- * Product card matching the reference UI: image on top with corner badges and
- * a floating bag button, then category / name / price / rating beneath.
- *
- * `priority` should be true only for above-the-fold cards so the LCP image
- * is preloaded and everything else stays lazy.
- *
- * `focusable` exists for carousels that duplicate cards to fake an infinite
- * loop: the copies are decorative, so they must stay out of the tab order.
- */
 export function ProductCard({
   product,
   priority = false,
@@ -40,9 +30,7 @@ export function ProductCard({
   const outOfStock = product.stock <= 0;
   const tabIndex = focusable ? undefined : -1;
 
-
   function handleAdd(event: React.MouseEvent) {
-    // The whole card is a link — don't navigate when hitting the bag.
     event.preventDefault();
     event.stopPropagation();
     if (outOfStock) return;
@@ -66,15 +54,16 @@ export function ProductCard({
   return (
     <article
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-card border border-ink-200 bg-white transition-shadow duration-200 hover:shadow-lift",
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-ink-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-ink-400 hover:shadow-xl hover:shadow-ink-900/5",
         className,
       )}
     >
+      {/* Image Container with Zoom & Badge Floating Overlay */}
       <Link
         href={`/products/${product.slug}`}
         tabIndex={tabIndex}
         onFocus={onFocus}
-        className="relative aspect-square overflow-hidden bg-ink-50"
+        className="relative aspect-[4/3] sm:aspect-square overflow-hidden bg-ink-50/50"
       >
         {product.image ? (
           <Image
@@ -84,55 +73,66 @@ export function ProductCard({
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             priority={priority}
             loading={priority ? undefined : "lazy"}
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-108"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-ink-400">
+          <div className="flex h-full w-full items-center justify-center text-xs font-medium text-ink-400">
             Image coming soon
           </div>
         )}
 
-        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+        {/* Floating Badges */}
+        <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5 pointer-events-none">
           {product.isNewArrival ? <Badge tone="new">New</Badge> : null}
-          {product.isBestseller && !product.isNewArrival ? (
-            <Badge tone="best">Best</Badge>
-          ) : null}
           <SaleBadge
             price={product.price}
             compareAtPrice={product.compareAtPrice}
           />
         </div>
 
+        {/* Out of stock Overlay with Backdrop Blur */}
         {outOfStock ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70">
-            <Badge tone="muted">Out of stock</Badge>
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+            <Badge tone="muted" className="scale-105 font-medium shadow-sm">
+              Out of stock
+            </Badge>
           </div>
         ) : null}
       </Link>
 
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-ink-400">
-          {product.categoryName}
-        </p>
+      {/* Details Container */}
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        {/* Category & Title */}
+        <div className="flex-1">
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-ink-400">
+            {product.categoryName}
+          </p>
 
-        <h3 className="line-clamp-2-fixed min-h-10 text-sm font-semibold leading-5 text-ink-900">
-          <Link
-            href={`/products/${product.slug}`}
-            tabIndex={tabIndex}
-            onFocus={onFocus}
-          >
-            {product.name}
-          </Link>
-        </h3>
+          <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-semibold tracking-tight text-ink-900 group-hover:text-ink-600 transition-colors">
+            <Link
+              href={`/products/${product.slug}`}
+              tabIndex={tabIndex}
+              onFocus={onFocus}
+            >
+              {product.name}
+            </Link>
+          </h3>
+        </div>
 
-        <StarRating
-          rating={product.ratingAvg}
-          count={product.ratingCount}
-          size={12}
-        />
+        {/* Star Rating */}
+        <div className="mt-2.5">
+          <StarRating
+            rating={product.ratingAvg}
+            count={product.ratingCount}
+            size={13}
+          />
+        </div>
 
-        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-          <Price price={product.price} compareAtPrice={product.compareAtPrice} />
+        {/* Price & Action Button */}
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-ink-100/80 pt-3">
+          <div className="flex flex-col">
+            <Price price={product.price} compareAtPrice={product.compareAtPrice} />
+          </div>
 
           <button
             type="button"
@@ -142,14 +142,18 @@ export function ProductCard({
             onFocus={onFocus}
             aria-label={`Add ${product.name} to cart`}
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-lg border transition-colors",
+              "relative flex size-10 shrink-0 items-center justify-center rounded-xl font-medium transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-900 focus-visible:ring-offset-2",
               added
-                ? "border-brand-600 bg-brand-600 text-white"
-                : "border-ink-200 text-ink-700 hover:border-ink-900 hover:bg-ink-900 hover:text-white",
-              outOfStock && "cursor-not-allowed opacity-40 hover:bg-transparent",
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20 scale-105"
+                : "bg-ink-900 text-white hover:bg-ink-800 hover:shadow-md hover:shadow-ink-900/10",
+              outOfStock && "cursor-not-allowed bg-ink-100 text-ink-400 hover:bg-ink-100 hover:shadow-none active:scale-100",
             )}
           >
-            {added ? <Check size={16} /> : <ShoppingBag size={16} />}
+            {added ? (
+              <Check size={18} className="animate-in zoom-in-50 duration-200" />
+            ) : (
+              <ShoppingBag size={18} className="transition-transform group-hover/btn:scale-110" />
+            )}
           </button>
         </div>
       </div>
@@ -168,7 +172,10 @@ export function ProductGrid({
 }) {
   return (
     <div
-      className={cn("grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-5", className)}
+      className={cn(
+        "grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4",
+        className,
+      )}
     >
       {products.map((product, index) => (
         <ProductCard

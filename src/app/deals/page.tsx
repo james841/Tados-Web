@@ -6,8 +6,7 @@ import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Deals — Smart Security on Special",
-  description:
-    "Every Tados Web product currently marked down: smart locks, alarms, switches and speakers at reduced prices, while stock lasts.",
+  description: `Every ${SITE.name} product currently marked down: smart locks, alarms, switches and speakers at reduced prices, while stock lasts.`,
   alternates: { canonical: "/deals" },
   openGraph: {
     title: `Deals | ${SITE.name}`,

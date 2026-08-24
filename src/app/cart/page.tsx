@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 
 import { CartView } from "@/components/cart/cart-view";
+import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Your Cart",
-  description: "Review the items in your Tados Web cart before checking out.",
+  description: `Review the items in your ${SITE.name} cart before checking out.`,
   robots: { index: false, follow: true },
 };
 

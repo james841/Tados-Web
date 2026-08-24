@@ -1,12 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { ShoppingBag, Check, Minus, Plus, Truck, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { useState, type ReactNode } from "react";
+import {
+  Check,
+  Minus,
+  Plus,
+  RotateCcw,
+  ShieldCheck,
+  ShoppingBag,
+  Truck,
+} from "lucide-react";
 
 import { useCart } from "@/store/cart";
+import { DELIVERY_WINDOW } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { Button, Badge, Price, StarRating, SaleBadge } from "@/components/ui";
+import { Button, Price, StarRating, SaleBadge } from "@/components/ui";
 
 interface DetailImage {
   id: string;
@@ -28,7 +38,6 @@ export interface ProductDetailData {
   ratingCount: number;
   brandName: string | null;
   categoryName: string;
-  isBestseller: boolean;
   features: string[];
   images: DetailImage[];
 }
@@ -83,7 +92,6 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
           ) : null}
 
           <div className="absolute left-4 top-4 flex gap-2">
-            {product.isBestseller ? <Badge tone="best">Bestseller</Badge> : null}
             <SaleBadge
               price={product.price}
               compareAtPrice={product.compareAtPrice}
@@ -244,26 +252,30 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
           </Button>
         </div>
 
-        {/* Reassurance */}
-        <div className="mt-7 grid gap-3 rounded-card bg-ink-50 p-5 sm:grid-cols-2">
-          <div className="flex items-start gap-2.5">
-            <Truck size={18} className="mt-0.5 shrink-0 text-brand-600" />
-            <div>
-              <p className="text-sm font-semibold text-ink-900">
-                Free delivery over R1 500
-              </p>
-              <p className="text-xs text-ink-500">2–4 working days</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2.5">
-            <ShieldCheck size={18} className="mt-0.5 shrink-0 text-brand-600" />
-            <div>
-              <p className="text-sm font-semibold text-ink-900">
-                2-year warranty
-              </p>
-              <p className="text-xs text-ink-500">Manufacturer-backed</p>
-            </div>
-          </div>
+        {/* Reassurance.
+            Every claim links to the policy behind it. The previous version
+            promised "Free delivery over R1 500 / 2–4 working days" and a flat
+            "2-year warranty" — neither of which the Shipping or Warranty policy
+            commits to, and the warranty term genuinely varies per product. */}
+        <div className="mt-7 grid gap-3 rounded-card bg-ink-50 p-5 sm:grid-cols-3">
+          <ReassuranceTile
+            href="/shipping"
+            icon={<Truck size={18} />}
+            title="Nationwide delivery"
+            detail={DELIVERY_WINDOW}
+          />
+          <ReassuranceTile
+            href="/warranty"
+            icon={<ShieldCheck size={18} />}
+            title="Warranty"
+            detail="Statutory + manufacturer cover"
+          />
+          <ReassuranceTile
+            href="/returns"
+            icon={<RotateCcw size={18} />}
+            title="Returns"
+            detail="Defective, wrong or damaged"
+          />
         </div>
 
         {/* Full description */}
@@ -302,5 +314,30 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** One tile in the reassurance strip, linked to the policy that backs it. */
+function ReassuranceTile({
+  href,
+  icon,
+  title,
+  detail,
+}: {
+  href: string;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link href={href} className="group flex items-start gap-2.5">
+      <span className="mt-0.5 shrink-0 text-brand-600">{icon}</span>
+      <span>
+        <span className="block text-sm font-semibold text-ink-900 group-hover:text-brand-700">
+          {title}
+        </span>
+        <span className="block text-xs text-ink-500">{detail}</span>
+      </span>
+    </Link>
   );
 }
