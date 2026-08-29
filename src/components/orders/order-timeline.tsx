@@ -154,9 +154,13 @@ export function OrderTimeline({
 type StepState = "done" | "current" | "upcoming" | "terminal";
 
 const MARKER_STYLES: Record<StepState, string> = {
+  // The two filled markers keep a literal white glyph — `brand-600` and
+  // `red-500` are unchanged by the dark theme, so white stays correct on them.
+  // The two hollow markers use `bg-surface` so they follow the card they sit on
+  // when this timeline is rendered inside the admin panel.
   done: "border-brand-600 bg-brand-600 text-white",
-  current: "border-brand-600 bg-white text-brand-700 ring-4 ring-brand-100",
-  upcoming: "border-ink-200 bg-white text-ink-300",
+  current: "border-brand-600 bg-surface text-brand-700 ring-4 ring-brand-100",
+  upcoming: "border-ink-200 bg-surface text-ink-300",
   terminal: "border-red-500 bg-red-500 text-white",
 };
 

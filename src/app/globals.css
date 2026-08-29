@@ -10,7 +10,29 @@
  * The palette uses four brand colors (white, black, green, orange) as requested.
  */
 
+/**
+ * Dark mode is opt-in by class, not by `prefers-color-scheme`.
+ *
+ * The storefront is light-only by design; only the admin panel has a theme
+ * toggle, and it scopes `.dark` to its own shell. Keying off the media query
+ * instead would flip the customer-facing site for anyone whose OS is dark,
+ * which is not what the toggle is meant to control.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
+  /**
+   * Surfaces.
+   *
+   * `surface` is the card/panel colour and `canvas` (ink-50) is the page behind
+   * it. Kept as a token rather than a literal `bg-white` so that one override
+   * in the `.dark` block below re-skins every card. The relationship is what
+   * matters: surface always sits one step *away from* the canvas, which in
+   * light mode means brighter and in dark mode means lighter-than-black.
+   */
+  --color-surface: oklch(1 0 0);
+  --color-surface-raised: oklch(1 0 0);
+
   /* Neutrals — "ink" */
   --color-ink-50: oklch(0.99 0 0);
   --color-ink-100: oklch(0.97 0 0);
@@ -82,6 +104,123 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/**
+ * Dark theme.
+ *
+ * This inverts the *meaning* of the ink ramp rather than adding `dark:` variants
+ * to individual elements. Because the neutrals are chroma-0 and used
+ * consistently — ink-50 for the canvas, ink-200 for borders, ink-500/600 for
+ * body copy, ink-900 for headings — redefining these eleven variables re-skins
+ * every admin page and component at once. Adding per-element variants instead
+ * would mean touching several hundred class lists and would drift the moment
+ * someone adds a page without remembering to double up each colour.
+ *
+ * The ramp is not a mechanical mirror of the light one. A true inversion would
+ * put the canvas at oklch(0.09) — near-black — which reads as harsh and makes
+ * the elevation between page and card almost invisible. The canvas sits at 0.17
+ * instead, leaving room for surfaces above it and borders above those.
+ *
+ * The accent tints get the same treatment. `bg-red-50` is a pale wash behind
+ * error text in light mode; left alone it would render as a glaring near-white
+ * slab in dark mode. Each tint pair is re-voiced so that the light shades stay
+ * backgrounds and the dark shades stay foregrounds, preserving the contrast
+ * direction every component already assumes.
+ */
+.dark {
+  /* Surfaces sit *above* the canvas, so they get lighter, not darker. */
+  --color-surface: oklch(0.215 0 0);
+  --color-surface-raised: oklch(0.255 0 0);
+
+  /* Neutrals, inverted: 50 is now the darkest and 950 the lightest. */
+  --color-ink-50: oklch(0.17 0 0);
+  --color-ink-100: oklch(0.22 0 0);
+  --color-ink-200: oklch(0.28 0 0);
+  --color-ink-300: oklch(0.36 0 0);
+  --color-ink-400: oklch(0.55 0 0);
+  --color-ink-500: oklch(0.68 0 0);
+  --color-ink-600: oklch(0.78 0 0);
+  --color-ink-700: oklch(0.85 0 0);
+  --color-ink-800: oklch(0.91 0 0);
+  --color-ink-900: oklch(0.96 0 0);
+  --color-ink-950: oklch(0.99 0 0);
+
+  /**
+   * Brand green.
+   *
+   * Only the shades used as *text* are lightened. The mid shades are left
+   * exactly as they are in light mode on purpose: `brand-500` and `brand-600`
+   * are fills that carry white text on top of them — the primary Button, the
+   * completed step in OrderTimeline, the sales-trend bars. Lightening a fill
+   * without also darkening its text puts white on pale green and the label
+   * disappears, so these stay put and keep working in both themes.
+   */
+  --color-brand-50: oklch(0.26 0.05 156);
+  --color-brand-100: oklch(0.31 0.07 156);
+  --color-brand-200: oklch(0.38 0.10 156);
+  --color-brand-700: oklch(0.78 0.14 156);
+  --color-brand-800: oklch(0.85 0.11 156);
+
+  /* Orange accent is left entirely alone, for the same reason: the only places
+     the admin can reach it are `bg-accent-500` fills inside shared components. */
+
+  /* Semantic tints — light shades become dark washes, dark shades brighten. */
+  --color-red-50: oklch(0.26 0.06 25);
+  --color-red-100: oklch(0.31 0.08 25);
+  --color-red-200: oklch(0.38 0.10 25);
+  --color-red-600: oklch(0.72 0.17 25);
+  --color-red-700: oklch(0.80 0.14 25);
+  --color-red-800: oklch(0.86 0.11 25);
+
+  --color-amber-50: oklch(0.26 0.05 85);
+  --color-amber-100: oklch(0.31 0.07 85);
+  --color-amber-200: oklch(0.38 0.09 85);
+  --color-amber-600: oklch(0.78 0.14 85);
+  --color-amber-700: oklch(0.83 0.12 85);
+  --color-amber-800: oklch(0.87 0.10 85);
+  --color-amber-900: oklch(0.90 0.08 85);
+
+  --color-blue-50: oklch(0.26 0.05 240);
+  --color-blue-100: oklch(0.31 0.07 240);
+  --color-blue-200: oklch(0.38 0.09 240);
+  --color-blue-600: oklch(0.70 0.14 240);
+  --color-blue-700: oklch(0.78 0.13 240);
+  --color-blue-800: oklch(0.84 0.10 240);
+
+  --color-indigo-50: oklch(0.26 0.05 270);
+  --color-indigo-100: oklch(0.31 0.07 270);
+  --color-indigo-700: oklch(0.78 0.13 270);
+  --color-indigo-800: oklch(0.84 0.10 270);
+
+  /**
+   * Green is Tailwind's default palette, not one of ours — the dashboard uses
+   * `text-green-600` for a rising delta. Overriding the variable works whether
+   * the light value came from our `@theme` or Tailwind's defaults, because the
+   * utility compiles to `var(--color-green-600)` either way.
+   */
+  --color-green-100: oklch(0.31 0.07 156);
+  --color-green-600: oklch(0.72 0.16 156);
+  --color-green-700: oklch(0.78 0.14 156);
+  --color-green-800: oklch(0.84 0.11 156);
+
+  /* Emerald, for the DELIVERED order pill — a hair cooler than green so the
+     two statuses stay distinguishable side by side. */
+  --color-emerald-100: oklch(0.31 0.07 168);
+  --color-emerald-800: oklch(0.84 0.11 168);
+
+  /**
+   * Shadows read as almost nothing on a dark canvas — depth has to come from
+   * the surface/canvas lightness gap instead. Deepening them keeps the little
+   * that does register from looking like a grey haze.
+   */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.45),
+    0 2px 4px -2px rgb(0 0 0 / 0.45);
+
+  /* Native form controls, scrollbars and autofill follow this. */
+  color-scheme: dark;
 }
 
 @layer utilities {

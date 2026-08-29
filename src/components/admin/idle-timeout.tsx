@@ -147,9 +147,9 @@ export function IdleTimeout() {
       aria-modal="true"
       aria-labelledby="idle-timeout-title"
       aria-describedby="idle-timeout-description"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
     >
-      <div className="w-full max-w-sm rounded-card border border-ink-200 bg-white p-6 shadow-lg">
+      <div className="w-full max-w-sm rounded-card border border-ink-200 bg-surface p-6 shadow-lg">
         <span className="inline-flex size-11 items-center justify-center rounded-full bg-amber-50 text-amber-600">
           <ShieldAlert size={22} />
         </span>

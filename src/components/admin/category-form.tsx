@@ -166,12 +166,12 @@ export function CategoryFormDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink-950/50 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="category-form-title"
-        className="w-full max-w-2xl rounded-card bg-white shadow-xl"
+        className="w-full max-w-2xl rounded-card bg-surface shadow-xl"
       >
         <header className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
           <h2
@@ -341,7 +341,7 @@ export function CategoryFormDialog({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-ink-800 disabled:opacity-50"
+              className="rounded-lg bg-ink-900 px-5 py-2.5 text-sm font-semibold text-ink-50 transition-colors hover:bg-ink-800 disabled:opacity-50"
             >
               {saving ? "Saving…" : isEdit ? "Save changes" : "Create category"}
             </button>

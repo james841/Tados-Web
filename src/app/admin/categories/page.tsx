@@ -196,7 +196,7 @@ export default function AdminCategoriesPage() {
         <button
           type="button"
           onClick={() => setEditing(null)}
-          className="inline-flex items-center gap-2 rounded-lg bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-ink-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-ink-900 px-4 py-2.5 text-sm font-semibold text-ink-50 transition-colors hover:bg-ink-800"
         >
           <Plus size={16} />
           New category
@@ -209,7 +209,7 @@ export default function AdminCategoriesPage() {
         </p>
       ) : null}
 
-      <div className="mt-6 overflow-hidden rounded-card border border-ink-200 bg-white">
+      <div className="mt-6 overflow-hidden rounded-card border border-ink-200 bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
@@ -456,7 +456,7 @@ function ProductPanel({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-ink-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-ink-200 bg-surface">
       <ul className="divide-y divide-ink-100">
         {products.map((product) => (
           <li

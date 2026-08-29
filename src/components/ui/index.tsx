@@ -12,13 +12,17 @@ type Variant = "primary" | "accent" | "dark" | "outline" | "ghost";
 type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
+  // `primary` and `accent` sit on saturated fills that are identical in both
+  // themes, so their label stays literally white. `dark` and `outline` sit on
+  // ink shades, which invert inside the admin panel's `.dark` scope — hence the
+  // tokens. See the brand note in globals.css.
   primary:
     "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-sm",
   accent:
     "bg-accent-500 text-white hover:bg-accent-600 active:bg-accent-700 shadow-sm",
-  dark: "bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950 shadow-sm",
+  dark: "bg-ink-900 text-ink-50 hover:bg-ink-800 active:bg-ink-950 shadow-sm",
   outline:
-    "border border-ink-300 bg-white text-ink-900 hover:border-ink-900 hover:bg-ink-50",
+    "border border-ink-300 bg-surface text-ink-900 hover:border-ink-900 hover:bg-ink-50",
   ghost: "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
 };
 

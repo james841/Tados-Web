@@ -229,12 +229,16 @@ export function ImageUploader({
               />
 
               {index === 0 && multiple ? (
-                <span className="absolute left-1 top-1 rounded bg-ink-900/80 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                // Literal black/white, not ink tokens: this sits on top of an
+                // arbitrary uploaded photo, so it needs the same contrast in
+                // both themes. `bg-ink-900` would inevitably invert to a pale
+                // chip and take the white text with it.
+                <span className="absolute left-1 top-1 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                   Main
                 </span>
               ) : null}
 
-              <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-gradient-to-t from-ink-950/80 to-transparent p-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+              <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-gradient-to-t from-black/80 to-transparent p-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                 {multiple ? (
                   <span className="flex gap-1">
                     <TileButton
@@ -368,7 +372,10 @@ function TileButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="flex size-6 items-center justify-center rounded bg-white/90 text-ink-800 transition-colors hover:bg-white disabled:opacity-30"
+      // Also theme-independent — see the "Main" badge above. These float over
+      // the thumbnail itself, so the pairing has to be a fixed white chip with
+      // a black glyph rather than anything that tracks the panel colour.
+      className="flex size-6 items-center justify-center rounded bg-white/90 text-black transition-colors hover:bg-white disabled:opacity-30"
     >
       {children}
     </button>

@@ -18,6 +18,7 @@ import { useState } from "react";
 
 import { clearAdminActivity } from "@/lib/admin-activity";
 import { cn } from "@/lib/utils";
+import { AdminThemeToggle } from "@/components/admin/theme-toggle";
 
 const LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -43,24 +44,38 @@ export function AdminSidebar({
   const [signingOut, setSigningOut] = useState(false);
 
   return (
-    <aside className="sticky top-0 z-30 flex h-auto w-full shrink-0 flex-row items-center gap-2 overflow-x-auto border-b border-ink-200 bg-white px-4 py-3 lg:h-screen lg:w-60 lg:flex-col lg:items-stretch lg:overflow-visible lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
-      <Link
-        href="/admin"
-        aria-label="Tados admin dashboard"
-        className="mr-2 flex shrink-0 items-center gap-2 lg:mb-6 lg:mr-0 lg:px-2"
-      >
-        <Image
-          src="/logo-icon.png"
-          alt=""
-          width={262}
-          height={256}
-          priority
-          className="h-7 w-auto brightness-[0.42]"
-        />
-        <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">
-          Admin
-        </span>
-      </Link>
+    <aside className="sticky top-0 z-30 flex h-auto w-full shrink-0 flex-row items-center gap-2 overflow-x-auto border-b border-ink-200 bg-surface px-4 py-3 lg:h-screen lg:w-60 lg:flex-col lg:items-stretch lg:overflow-visible lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
+      {/**
+       * The theme toggle lives up here with the logo, not down in the user block
+       * below — that block is `hidden lg:block`, so anything inside it is
+       * unreachable on a phone. This row is the only part of the sidebar that
+       * renders in both the desktop column and the mobile bar, and it sits
+       * before the horizontally-scrolling nav so it can't scroll out of reach.
+       */}
+      <div className="mr-2 flex shrink-0 items-center gap-2 lg:mb-6 lg:mr-0 lg:w-full lg:justify-between lg:px-2">
+        <Link
+          href="/admin"
+          aria-label="Tados admin dashboard"
+          className="flex items-center gap-2"
+        >
+          <Image
+            src="/logo-icon.png"
+            alt=""
+            width={262}
+            height={256}
+            priority
+            // The knock-down to 42% is what makes the mark read as near-black on
+            // a light sidebar. On a dark one it would sink into the background,
+            // so the filter comes off and the original light mark is used.
+            className="h-7 w-auto brightness-[0.42] dark:brightness-100"
+          />
+          <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+            Admin
+          </span>
+        </Link>
+
+        <AdminThemeToggle />
+      </div>
 
       <nav className="flex flex-1 flex-row gap-1 lg:flex-col">
         {LINKS.map((link) => {
@@ -78,7 +93,7 @@ export function AdminSidebar({
               className={cn(
                 "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "bg-ink-900 text-white"
+                  ? "bg-ink-900 text-ink-50"
                   : "text-ink-600 hover:bg-ink-100 hover:text-ink-900",
               )}
             >

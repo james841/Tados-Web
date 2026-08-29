@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronRightIcon, ShieldCheckIcon, TruckIcon, RefreshCwIcon, ArrowRightIcon } from "lucide-react";
 
 import { ProductDetail } from "@/components/product/product-detail";
 import { ProductGrid } from "@/components/product/product-card";
@@ -145,8 +146,6 @@ export default async function ProductPage({
 
   const related = await getRelatedProducts(product.id, product.categoryId, 4);
 
-  // The query layer returns DB-shaped rows; ProductDetail wants a flattened
-  // view model. Mapping here keeps the component free of Prisma concerns.
   const detail = {
     ...product,
     shortDescription: product.tagline,
@@ -155,48 +154,111 @@ export default async function ProductPage({
   };
 
   return (
-    <>
+    <main className="min-h-screen">
       <ProductSchema product={product} />
 
-      <div className="container-page py-6">
-        <nav aria-label="Breadcrumb" className="text-sm text-ink-500">
-          <ol className="flex flex-wrap items-center gap-1.5">
-            <li>
-              <Link href="/" className="hover:text-ink-900">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li>
-              <Link href="/products" className="hover:text-ink-900">
-                Products
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li>
-              <Link
-                href={`/category/${product.category.slug}`}
-                className="hover:text-ink-900"
+      {/* Styled Header & Breadcrumbs */}
+      <div className="border-b border-ink-500/10 bg-slate-50/50">
+        <div className="container-page py-4">
+          <nav aria-label="Breadcrumb" className="text-xs sm:text-sm text-ink-500">
+            <ol className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <li>
+                <Link
+                  href="/"
+                  className="transition-colors hover:text-ink-900"
+                >
+                  Home
+                </Link>
+              </li>
+              <li aria-hidden="true" className="opacity-40">
+                <ChevronRightIcon className="h-3.5 w-3.5" />
+              </li>
+              <li>
+                <Link
+                  href="/products"
+                  className="transition-colors hover:text-ink-900"
+                >
+                  Products
+                </Link>
+              </li>
+              <li aria-hidden="true" className="opacity-40">
+                <ChevronRightIcon className="h-3.5 w-3.5" />
+              </li>
+              <li>
+                <Link
+                  href={`/category/${product.category.slug}`}
+                  className="transition-colors hover:text-ink-900"
+                >
+                  {product.category.name}
+                </Link>
+              </li>
+              <li aria-hidden="true" className="opacity-40">
+                <ChevronRightIcon className="h-3.5 w-3.5" />
+              </li>
+              <li
+                aria-current="page"
+                className="font-semibold text-ink-900 truncate max-w-[200px] sm:max-w-xs"
               >
-                {product.category.name}
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li aria-current="page" className="font-medium text-ink-900">
-              {product.name}
-            </li>
-          </ol>
-        </nav>
+                {product.name}
+              </li>
+            </ol>
+          </nav>
+        </div>
       </div>
 
-      <ProductDetail product={detail} />
+      {/* Hero Product Detail Container */}
+      <section className="container-page py-6 sm:py-10">
+        <ProductDetail product={detail} />
+      </section>
 
+      {/* Value Proposition Micro-Banner */}
+      <section className="border-y border-ink-500/10 bg-slate-50/60 py-8 my-12">
+        <div className="container-page grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start space-x-3">
+            <TruckIcon className="h-6 w-6 text-ink-900 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-ink-900">Fast Nationwide Delivery</p>
+              <p className="text-xs text-ink-500">Reliable shipping direct to your door</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center md:justify-start space-x-3">
+            <ShieldCheckIcon className="h-6 w-6 text-ink-900 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-ink-900">100% Secure Checkout</p>
+              <p className="text-xs text-ink-500">Encrypted payment processing</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center md:justify-start space-x-3">
+            <RefreshCwIcon className="h-6 w-6 text-ink-900 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-ink-900">Hassle-Free Returns</p>
+
+              <p className="text-xs text-ink-500">Easy returns within 30 days</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Related Products Section */}
       {related.length > 0 ? (
-        <section className="container-page py-12 sm:py-16">
-          <SectionHeading title="You may also like" />
+        <section className="container-page py-8 sm:py-12 mb-16">
+          <div className="flex items-end justify-between mb-8 border-b border-ink-500/10 pb-4">
+            <div>
+              <span className="text-xs font-semibold tracking-wider text-ink-500 uppercase">
+                Curated Suggestions
+              </span>
+              <SectionHeading title="You may also like" className="mt-1" />
+            </div>
+            <Link
+              href={`/category/${product.category.slug}`}
+              className="inline-flex items-center gap-1 text-sm font-medium text-ink-900 hover:opacity-80 transition-opacity"
+            >
+              View collection <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+          </div>
           <ProductGrid products={related} className="mt-6" />
         </section>
       ) : null}
-    </>
+    </main>
   );
 }

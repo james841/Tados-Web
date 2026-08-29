@@ -5,14 +5,22 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// `url` is Supabase's transaction-mode pooler (port 6543) — the right mode for
+// short-lived queries, and the only one that survives serverless. Session mode
+// (5432) holds one real Postgres connection per client for its whole lifetime,
+// so a dev server or a fleet of Vercel functions exhausts the pooler and Prisma
+// reports the refusal as "Can't reach database server".
+//
+// Migrations can't run through transaction mode — they need a real session for
+// advisory locks and DDL — so `directUrl` points at 5432. Kept on the pooler
+// host rather than the `db.<ref>.supabase.co` direct host, which is IPv6-only
+// and unreachable from IPv4 networks.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ---------------------------------------------------------------
-// AUTH  (NextAuth / Auth.js v5 + Prisma adapter)
-// ---------------------------------------------------------------
 
 enum Role {
   CUSTOMER

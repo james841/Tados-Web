@@ -33,7 +33,7 @@ export default function AdminSettingsPage() {
         </p>
       </header>
 
-      <section className="rounded-card border border-ink-200 bg-white">
+      <section className="rounded-card border border-ink-200 bg-surface">
         <div className="border-b border-ink-200 px-6 py-4">
           <h2 className="font-bold text-ink-900">Store details</h2>
         </div>
@@ -45,7 +45,7 @@ export default function AdminSettingsPage() {
         </dl>
       </section>
 
-      <section className="rounded-card border border-ink-200 bg-white">
+      <section className="rounded-card border border-ink-200 bg-surface">
         <div className="border-b border-ink-200 px-6 py-4">
           <h2 className="font-bold text-ink-900">Contact information</h2>
         </div>
@@ -68,7 +68,7 @@ export default function AdminSettingsPage() {
         </dl>
       </section>
 
-      <section className="rounded-card border border-ink-200 bg-white">
+      <section className="rounded-card border border-ink-200 bg-surface">
         <div className="border-b border-ink-200 px-6 py-4">
           <h2 className="font-bold text-ink-900">Commerce</h2>
         </div>

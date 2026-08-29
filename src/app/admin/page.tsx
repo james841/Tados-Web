@@ -19,9 +19,13 @@ import { cn, formatPrice } from "@/lib/utils";
 /** Shape returned by /api/admin/stats. */
 type Stats = {
   kpis: Record<
-    "revenue" | "orders" | "returns" | "customers" | "lowStock",
+    "revenue" | "orders" | "returns" | "lowStock",
     { value: number; delta: number }
-  >;
+  > & {
+    // Customers carries the lifetime figure alongside the windowed one, because
+    // "new this week" is the trend but "how many altogether" is the context.
+    customers: { value: number; delta: number; total: number };
+  };
   trend: Array<{ day: string; total: number }>;
   topProducts: Array<{
     id: string;
@@ -83,7 +87,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="flex rounded-lg border border-ink-200 bg-white p-1">
+        <div className="flex rounded-lg border border-ink-200 bg-surface p-1">
           {RANGES.map((option) => (
             <button
               key={option.value}
@@ -92,7 +96,7 @@ export default function AdminDashboardPage() {
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                 range === option.value
-                  ? "bg-ink-900 text-white"
+                  ? "bg-ink-900 text-ink-50"
                   : "text-ink-600 hover:text-ink-900",
               )}
             >
@@ -122,9 +126,18 @@ export default function AdminDashboardPage() {
           delta={stats?.kpis.orders.delta}
         />
         <StatCard
-          label="Customers"
+          // "New customers", not "Customers": the figure is now windowed like
+          // the others, and a range-scoped count under a lifetime-sounding
+          // label would read as the customer base having vanished.
+          label="New customers"
           icon={Users}
           value={stats ? String(stats.kpis.customers.value) : null}
+          delta={stats?.kpis.customers.delta}
+          footnote={
+            stats
+              ? `${stats.kpis.customers.total.toLocaleString()} total`
+              : undefined
+          }
         />
         <StatCard
           label="Returns"
@@ -170,12 +183,15 @@ function StatCard({
   label,
   value,
   delta,
+  footnote,
   icon: Icon,
   invertDelta = false,
 }: {
   label: string;
   value: string | null;
   delta?: number;
+  /** Secondary figure for context, e.g. a lifetime total behind a windowed one. */
+  footnote?: string;
   icon: typeof Wallet;
   invertDelta?: boolean;
 }) {
@@ -183,7 +199,7 @@ function StatCard({
   const good = invertDelta ? !rising : rising;
 
   return (
-    <div className="rounded-card border border-ink-200 bg-white p-5">
+    <div className="rounded-card border border-ink-200 bg-surface p-5">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-ink-500">{label}</p>
         <Icon size={16} className="text-ink-400" />
@@ -207,6 +223,9 @@ function StatCard({
           {rising ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
           {Math.abs(delta).toFixed(1)}%
           <span className="font-normal text-ink-400">vs previous</span>
+          {footnote ? (
+            <span className="ml-auto font-normal text-ink-400">{footnote}</span>
+          ) : null}
         </p>
       ) : null}
     </div>
@@ -231,7 +250,7 @@ function SalesTrend({
   return (
     <section
       className={cn(
-        "rounded-card border border-ink-200 bg-white p-5",
+        "rounded-card border border-ink-200 bg-surface p-5",
         className,
       )}
     >
@@ -251,7 +270,7 @@ function SalesTrend({
               className="group relative flex-1 rounded-t bg-brand-500/80 transition-colors hover:bg-brand-600"
               style={{ height: `${Math.max(4, (point.total / max) * 100)}%` }}
             >
-              <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-[11px] font-medium text-white group-hover:block">
+              <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-[11px] font-medium text-ink-50 group-hover:block">
                 {formatPrice(point.total)}
               </span>
             </div>
@@ -272,7 +291,7 @@ function TopProducts({
   return (
     <section
       className={cn(
-        "rounded-card border border-ink-200 bg-white p-5",
+        "rounded-card border border-ink-200 bg-surface p-5",
         className,
       )}
     >
@@ -319,7 +338,7 @@ function TopProducts({
 
 function RecentOrders({ orders }: { orders: Stats["recentOrders"] | null }) {
   return (
-    <section className="mt-4 rounded-card border border-ink-200 bg-white p-5">
+    <section className="mt-4 rounded-card border border-ink-200 bg-surface p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-ink-900">Recent orders</h2>
         <Link

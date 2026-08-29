@@ -191,7 +191,7 @@ export default function AdminOrderDetailPage({
                 disabled={updating}
                 onChange={(event) => changeStatus(event.target.value)}
                 aria-label={`Change status of ${order.orderNumber}`}
-                className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-ink-900 disabled:opacity-50"
+                className="rounded-lg border border-ink-200 bg-surface px-3 py-2 text-sm text-ink-900 outline-none focus:border-ink-900 disabled:opacity-50"
               >
                 {ORDER_STATUSES.map((value) => (
                   <option key={value} value={value}>
@@ -406,7 +406,7 @@ function Card({
   bodyClassName?: string;
 }) {
   return (
-    <section className="overflow-hidden rounded-card border border-ink-200 bg-white">
+    <section className="overflow-hidden rounded-card border border-ink-200 bg-surface">
       <h2 className="flex items-center gap-2 border-b border-ink-100 px-5 py-3 text-sm font-bold uppercase tracking-wide text-ink-500">
         {icon}
         {title}

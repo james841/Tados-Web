@@ -1,8 +1,11 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AdminSidebar } from "@/components/admin/sidebar";
+import { AdminThemeProvider } from "@/components/admin/theme-provider";
 import { IdleTimeout } from "@/components/admin/idle-timeout";
+import { ADMIN_THEME_COOKIE, parseAdminTheme } from "@/lib/admin-theme";
 import { getCurrentUser } from "@/lib/auth";
 
 export const metadata = {
@@ -28,13 +31,22 @@ export default async function AdminLayout({
   if (!user) redirect("/login?callbackUrl=/admin");
   if (user.role !== "ADMIN") redirect("/");
 
+  // Read here rather than in the provider so the first byte of HTML already
+  // carries the right theme — no flash of the wrong one, no hydration mismatch.
+  const theme = parseAdminTheme(
+    (await cookies()).get(ADMIN_THEME_COOKIE)?.value,
+  );
+
   return (
-    <div className="flex min-h-screen bg-ink-50">
+    <AdminThemeProvider
+      initialTheme={theme}
+      className="flex min-h-screen bg-ink-50"
+    >
       <IdleTimeout />
       <AdminSidebar user={{ name: user.name, email: user.email }} />
       <main className="min-w-0 flex-1 px-5 py-6 lg:px-8 lg:py-8">
         {children}
       </main>
-    </div>
+    </AdminThemeProvider>
   );
 }

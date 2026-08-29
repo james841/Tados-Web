@@ -114,7 +114,7 @@ export default function AdminProductsPage() {
         <button
           type="button"
           onClick={() => setEditing(null)}
-          className="inline-flex items-center gap-2 rounded-lg bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-ink-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-ink-900 px-4 py-2.5 text-sm font-semibold text-ink-50 transition-colors hover:bg-ink-800"
         >
           <Plus size={16} />
           New product
@@ -132,11 +132,11 @@ export default function AdminProductsPage() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name or SKU…"
             aria-label="Search products"
-            className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
+            className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
           />
         </div>
 
-        <div className="flex rounded-lg border border-ink-200 bg-white p-1">
+        <div className="flex rounded-lg border border-ink-200 bg-surface p-1">
           {FILTERS.map((filter) => (
             <button
               key={filter.value}
@@ -148,7 +148,7 @@ export default function AdminProductsPage() {
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                 status === filter.value
-                  ? "bg-ink-900 text-white"
+                  ? "bg-ink-900 text-ink-50"
                   : "text-ink-600 hover:text-ink-900",
               )}
             >
@@ -164,7 +164,7 @@ export default function AdminProductsPage() {
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">

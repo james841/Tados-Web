@@ -78,16 +78,38 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const [customerCount, lowStockCount] = await Promise.all([
-      prisma.user.count({ where: { role: "CUSTOMER" } }),
-      prisma.product.count({
+    /**
+     * Customers.
+     *
+     * `customersNow` counts sign-ups *inside* the window so the card responds to
+     * the range picker like every other KPI — it previously ran an unfiltered
+     * `count()`, which returned the same lifetime figure for Today, 7d and 30d
+     * and looked like the stat was broken.
+     *
+     * `customerTotal` is still the lifetime figure, kept because "new this week"
+     * and "how many altogether" are both things a shopkeeper wants, and the
+     * windowed number on its own would read as a collapse in the customer base.
+     */
+    const [customersNow, customersPrev, customerTotal] = await Promise.all([
+      prisma.user.count({
+        where: { role: "CUSTOMER", createdAt: { gte: start } },
+      }),
+      prisma.user.count({
         where: {
-          isActive: true,
-          // Threshold is per-product, so compare the two columns directly.
-          stock: { lte: prisma.product.fields.lowStockAt },
+          role: "CUSTOMER",
+          createdAt: { gte: previousStart, lt: start },
         },
       }),
+      prisma.user.count({ where: { role: "CUSTOMER" } }),
     ]);
+
+    const lowStockCount = await prisma.product.count({
+      where: {
+        isActive: true,
+        // Threshold is per-product, so compare the two columns directly.
+        stock: { lte: prisma.product.fields.lowStockAt },
+      },
+    });
 
     const [recentOrders, topProducts] = await Promise.all([
       prisma.order.findMany({
@@ -150,7 +172,11 @@ export async function GET(request: Request) {
         revenue: { value: revenue, delta: delta(revenue, revenuePrevious) },
         orders: { value: ordersNow, delta: delta(ordersNow, ordersPrev) },
         returns: { value: returnsNow, delta: delta(returnsNow, returnsPrev) },
-        customers: { value: customerCount, delta: 0 },
+        customers: {
+          value: customersNow,
+          delta: delta(customersNow, customersPrev),
+          total: customerTotal,
+        },
         lowStock: { value: lowStockCount, delta: 0 },
       },
       trend: trendRows.map((row) => ({

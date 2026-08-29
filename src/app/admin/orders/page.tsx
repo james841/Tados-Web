@@ -117,7 +117,7 @@ export default function AdminOrdersPage() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search order number or email…"
             aria-label="Search orders"
-            className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
+            className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
           />
         </div>
 
@@ -128,7 +128,7 @@ export default function AdminOrdersPage() {
             setPage(1);
           }}
           aria-label="Filter by status"
-          className="rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-ink-900"
+          className="rounded-lg border border-ink-200 bg-surface px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-ink-900"
         >
           <option value="">All statuses</option>
           {ORDER_STATUSES.map((value) => (
@@ -145,7 +145,7 @@ export default function AdminOrdersPage() {
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
@@ -217,7 +217,7 @@ export default function AdminOrdersPage() {
                             changeStatus(order, event.target.value)
                           }
                           aria-label={`Change status of ${order.orderNumber}`}
-                          className="rounded-lg border border-ink-200 bg-white px-2 py-1 text-xs text-ink-700 outline-none focus:border-ink-900 disabled:opacity-50"
+                          className="rounded-lg border border-ink-200 bg-surface px-2 py-1 text-xs text-ink-700 outline-none focus:border-ink-900 disabled:opacity-50"
                         >
                           {ORDER_STATUSES.map((value) => (
                             <option key={value} value={value}>

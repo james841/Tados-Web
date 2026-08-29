@@ -415,7 +415,7 @@ export function BrandStrip() {
     >
       <div className="container-page">
         <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-widest text-ink-400 sm:text-left">
-          Trusted Brand Partners
+          Featured Brand
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:justify-between">
           {brands.map((brand) => (

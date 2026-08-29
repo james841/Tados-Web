@@ -36,7 +36,7 @@ export const SITE = {
    * NEXT_PUBLIC_WHATSAPP_NUMBER in .env and every surface picks it up.
    */
   whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "27000000000",
-  operatingHours: "Mon–Fri, 08:00–17:00 SAST",
+  operatingHours: "Mon–Sat, 08:00–17:00 SAST",
   /**
    * Where the business operates. Kept as a list because it appears in the
    * footer, contact page, About, FAQ and the Installation Support Policy — one
@@ -51,7 +51,7 @@ export const SITE = {
 } as const;
 
 /** "Pretoria and Durban" — for sentences. */
-export const CITIES_SENTENCE = "Pretoria and Durban";
+export const CITIES_SENTENCE = "Pretoria, Johannesburg and Durban";
 /** "Pretoria | Durban" — for the About page's location strip. */
 export const CITIES_DIVIDED = SITE.cities.join(" | ");
 

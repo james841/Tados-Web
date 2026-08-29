@@ -81,7 +81,7 @@ export default function AdminCustomersPage() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by name or email…"
           aria-label="Search customers"
-          className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
+          className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
         />
       </div>
 
@@ -91,7 +91,7 @@ export default function AdminCustomersPage() {
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
@@ -146,7 +146,7 @@ export default function AdminCustomersPage() {
                           <p className="flex items-center gap-2 truncate font-medium text-ink-900">
                             {customer.name ?? "—"}
                             {customer.role === "ADMIN" ? (
-                              <span className="rounded-full bg-ink-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                              <span className="rounded-full bg-ink-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-50">
                                 Admin
                               </span>
                             ) : null}
