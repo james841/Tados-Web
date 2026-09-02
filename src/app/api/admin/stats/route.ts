@@ -1,4 +1,5 @@
 import { handleRoute, jsonOk, requireAdmin } from "@/lib/api";
+import { isUnseenOrder } from "@/lib/order-alerts";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/utils";
 
@@ -121,6 +122,7 @@ export async function GET(request: Request) {
           email: true,
           total: true,
           status: true,
+          seenAt: true,
           createdAt: true,
           user: { select: { name: true, image: true } },
         },
@@ -198,6 +200,9 @@ export async function GET(request: Request) {
       recentOrders: recentOrders.map((order) => ({
         ...order,
         total: toNumber(order.total),
+        // The same flag the orders table uses, so an unread order is marked on
+        // the dashboard too — that's the screen an admin actually lands on.
+        isNew: isUnseenOrder(order),
       })),
     });
   });

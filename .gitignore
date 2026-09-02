@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# rendered email previews (npm run email:preview)
+/.email-preview/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

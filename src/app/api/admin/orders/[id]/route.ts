@@ -1,4 +1,5 @@
 import { HttpError, handleRoute, jsonOk, parseBody, requireAdmin } from "@/lib/api";
+import { isUnseenOrder } from "@/lib/order-alerts";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/utils";
 import { orderStatusSchema } from "@/lib/validators";
@@ -33,8 +34,33 @@ export async function GET(_request: Request, { params }: Params) {
 
     if (!order) throw new HttpError(404, "Order not found.");
 
+    /**
+     * Opening the order is what "seen" means.
+     *
+     * Stamped here rather than from a button the admin has to remember to press,
+     * and here rather than in the page component, because this is the one code
+     * path every route into the detail view goes through — the table, the bell
+     * dropdown, a bookmarked link, the email's "Open in admin" button.
+     *
+     * Failing to record it must not fail the request: not being able to dismiss
+     * a notification is a nuisance, while a 500 means the admin can't read the
+     * order they were trying to pack.
+     */
+    let seenAt = order.seenAt;
+
+    if (isUnseenOrder(order)) {
+      const stamp = new Date();
+      try {
+        await prisma.order.update({ where: { id }, data: { seenAt: stamp } });
+        seenAt = stamp;
+      } catch (error) {
+        console.error("[admin] could not mark order seen", { id, error });
+      }
+    }
+
     return jsonOk({
       ...order,
+      seenAt,
       subtotal: toNumber(order.subtotal),
       shipping: toNumber(order.shipping),
       tax: toNumber(order.tax),

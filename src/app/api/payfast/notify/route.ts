@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { sendOrderEmails } from "@/lib/order-emails";
 import { prisma } from "@/lib/prisma";
 import {
   amountsMatch,
@@ -143,6 +144,23 @@ export async function POST(request: Request) {
           },
         }),
       ]);
+
+      /**
+       * Receipt to the customer, alert to the shop.
+       *
+       * After the commit, not before: the emails describe a paid order, and
+       * sending them from inside the transaction would mean a rollback still
+       * left two emails claiming the payment went through.
+       *
+       * Sent once per order for free — the terminal-status guard above already
+       * exits early on every PayFast retry, so a redelivery never reaches here.
+       *
+       * `await`ed rather than fired and forgotten, because a serverless function
+       * can be frozen the moment it responds, which would cancel the request
+       * mid-flight. `sendOrderEmails` is written never to throw, so this cannot
+       * break the "always answer 200" contract.
+       */
+      await sendOrderEmails(order.id);
 
       return ok();
     }

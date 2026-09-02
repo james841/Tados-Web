@@ -22,9 +22,15 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
-    // Auth.js v5 prefixes the cookie with `__Secure-` over HTTPS; without this
-    // the token reads as null in production and every admin is bounced.
-    secureCookie: process.env.NODE_ENV === "production",
+    // Which cookie Auth.js actually wrote, rather than which one we assume it
+    // wrote. `@auth/core` picks the `__Secure-` prefix from the request URL's
+    // protocol — and `next-auth` rewrites that URL to `AUTH_URL`/`NEXTAUTH_URL`
+    // first, if either is set. So a stray `NEXTAUTH_URL=http://localhost:3000`
+    // in a production environment makes it write the unprefixed name while
+    // `NODE_ENV` still says "production". Guessing from `NODE_ENV` then looks
+    // for a cookie that was never set, every admin is bounced to /login, and
+    // signing in loops straight back. Reading the request tells us the truth.
+    secureCookie: hasSecureSessionCookie(request),
   });
 
   if (!token) {
@@ -76,6 +82,23 @@ export async function middleware(request: NextRequest) {
  */
 const SESSION_COOKIE_PATTERN =
   /^(__Secure-)?(authjs|next-auth)\.session-token(\.\d+)?$/;
+
+/**
+ * True when the session cookie on this request carries the `__Secure-` prefix.
+ *
+ * When neither name is present there is no session to read either way, so the
+ * value only decides which missing cookie we look for — the request is being
+ * bounced to /login regardless.
+ */
+function hasSecureSessionCookie(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some(
+      (cookie) =>
+        SESSION_COOKIE_PATTERN.test(cookie.name) &&
+        cookie.name.startsWith("__Secure-"),
+    );
+}
 
 function expireCookie(response: NextResponse, name: string) {
   response.cookies.set(name, "", {

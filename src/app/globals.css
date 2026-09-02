@@ -104,6 +104,37 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+
+  /**
+   * Motion — the unread-order signal.
+   *
+   * One keyframe, used in both places an unseen order announces itself: the
+   * count on the sidebar bell and the "New" pill on its row in the orders
+   * table. Sharing it is the point — two different attention effects would read
+   * as two unrelated warnings rather than one status.
+   *
+   * A box-shadow ring rather than a `transform: scale`, because the pill sits in
+   * a table cell: scaling it would nudge the row's text on every cycle. A shadow
+   * costs no layout.
+   *
+   * `color-mix` keeps the halo tied to the accent token, so re-skinning the
+   * palette re-skins the glow. Pair the utility with `motion-reduce:animate-none`
+   * at every call site — a pulse that never stops is exactly what a
+   * vestibular-sensitivity setting is asking you to turn off.
+   */
+  --animate-alert-ring: alert-ring 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+
+  @keyframes alert-ring {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent-500) 55%, transparent);
+    }
+    70% {
+      box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-accent-500) 0%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent-500) 0%, transparent);
+    }
+  }
 }
 
 /**

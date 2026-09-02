@@ -1,5 +1,6 @@
 import "server-only";
 
+import { sendOrderEmails } from "@/lib/order-emails";
 import { prisma } from "@/lib/prisma";
 import { IS_SANDBOX } from "@/lib/payfast";
 
@@ -61,6 +62,16 @@ export async function devConfirmOrder(orderNumber: string) {
   console.warn(
     `[dev] order ${orderNumber} settled without an ITN. Sandbox + development only.`,
   );
+
+  /**
+   * The same two emails the real ITN sends.
+   *
+   * Without this there is no way to see either template on a dev machine short
+   * of tunnelling PayFast's callback to localhost — and an email nobody can
+   * preview is an email that breaks quietly. Guarded by the same idempotency
+   * checks above, so re-visiting /checkout/success does not re-send.
+   */
+  await sendOrderEmails(order.id);
 
   return true;
 }

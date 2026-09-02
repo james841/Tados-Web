@@ -44,20 +44,40 @@ export function discountPercent(
   return Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
 }
 
+/**
+ * The shop's wall clock.
+ *
+ * Pinned rather than left to the runtime, because these formatters run in three
+ * places with three different zones: the customer's browser, the admin's
+ * browser, and a Vercel function (UTC). Unpinned, an order placed at 14:32 in
+ * Johannesburg prints "12:32" on the receipt the server renders and "14:32" on
+ * the order page the browser renders — the same order, two times, and a support
+ * conversation about which one is real. Every customer, courier and staff member
+ * this store deals with is on SAST, so SAST is what gets shown.
+ */
+const SHOP_TIME_ZONE = "Africa/Johannesburg";
+
 /** ORD-20260805-4821 */
 export function generateOrderNumber() {
-  const now = new Date();
-  const stamp = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("");
+  // Also in shop time: on a UTC server, an order placed at 01:30 SAST would
+  // otherwise be stamped with the previous day's date, so the day's orders
+  // wouldn't group under the day the shop actually took them.
+  const stamp = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SHOP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(new Date())
+    .replace(/-/g, "");
+
   const random = Math.floor(1000 + Math.random() * 9000);
   return `ORD-${stamp}-${random}`;
 }
 
 export function formatDate(date: Date | string) {
   return new Intl.DateTimeFormat("en-ZA", {
+    timeZone: SHOP_TIME_ZONE,
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -66,6 +86,7 @@ export function formatDate(date: Date | string) {
 
 export function formatDateTime(date: Date | string) {
   return new Intl.DateTimeFormat("en-ZA", {
+    timeZone: SHOP_TIME_ZONE,
     day: "numeric",
     month: "short",
     year: "numeric",

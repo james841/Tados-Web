@@ -16,6 +16,9 @@ type AdminOrder = {
   createdAt: string;
   itemCount: number;
   user: { name: string | null } | null;
+  /** Nobody has opened this order yet. Decided server-side by the API, using the
+   * same rule as the notification bell's count. */
+  isNew: boolean;
 };
 
 export default function AdminOrdersPage() {
@@ -182,14 +185,38 @@ export default function AdminOrdersPage() {
                 </tr>
               ) : (
                 orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-ink-50">
+                  <tr
+                    key={order.id}
+                    className={cn(
+                      "hover:bg-ink-50",
+                      // An alpha of the accent fill rather than `bg-accent-50`:
+                      // no accent token is redefined for dark mode, so the solid
+                      // tint would be a near-white band across a dark table.
+                      // Compositing over whatever `surface` currently is works in
+                      // both themes.
+                      order.isNew && "bg-accent-500/10 hover:bg-accent-500/15",
+                    )}
+                  >
                     <td className="px-4 py-3 font-medium">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="text-ink-900 hover:text-brand-700 hover:underline"
-                      >
-                        {order.orderNumber}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="text-ink-900 hover:text-brand-700 hover:underline"
+                        >
+                          {order.orderNumber}
+                        </Link>
+
+                        {order.isNew ? (
+                          <span
+                            // Labelled, not just coloured: a bare dot is a colour
+                            // the admin has to learn, and colour alone fails
+                            // anyone who can't distinguish it.
+                            className="inline-flex shrink-0 items-center rounded-full bg-accent-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white animate-alert-ring motion-reduce:animate-none"
+                          >
+                            New
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="max-w-[220px] truncate px-4 py-3 text-ink-600">
                       {order.user?.name ?? order.email}

@@ -42,6 +42,8 @@ type Stats = {
     status: string;
     createdAt: string;
     user: { name: string | null } | null;
+    /** Nobody has opened this order yet — same rule as the notification bell. */
+    isNew: boolean;
   }>;
 };
 
@@ -370,14 +372,30 @@ function RecentOrders({ orders }: { orders: Stats["recentOrders"] | null }) {
             </thead>
             <tbody className="divide-y divide-ink-100">
               {orders.map((order) => (
-                <tr key={order.id}>
+                <tr
+                  key={order.id}
+                  className={cn(
+                    // An alpha of the accent fill, not `bg-accent-50`: no accent
+                    // token is redefined for dark mode, so the solid tint would
+                    // be a near-white band across a dark table.
+                    order.isNew && "bg-accent-500/10",
+                  )}
+                >
                   <td className="py-2.5 pr-4">
-                    <Link
-                      href={`/admin/orders/${order.id}`}
-                      className="font-medium text-ink-900 hover:text-brand-700"
-                    >
-                      {order.orderNumber}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="font-medium text-ink-900 hover:text-brand-700"
+                      >
+                        {order.orderNumber}
+                      </Link>
+
+                      {order.isNew ? (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-accent-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white animate-alert-ring motion-reduce:animate-none">
+                          New
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="max-w-[200px] truncate py-2.5 pr-4 text-ink-600">
                     {order.user?.name ?? order.email}

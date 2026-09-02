@@ -6,6 +6,7 @@ import {
   readPagination,
   requireAdmin,
 } from "@/lib/api";
+import { isUnseenOrder } from "@/lib/order-alerts";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/utils";
 
@@ -58,6 +59,7 @@ export async function GET(request: Request) {
           email: true,
           total: true,
           status: true,
+          seenAt: true,
           createdAt: true,
           user: { select: { id: true, name: true, image: true } },
           payment: { select: { status: true, provider: true } },
@@ -72,6 +74,9 @@ export async function GET(request: Request) {
         ...order,
         total: toNumber(order.total),
         itemCount: order._count.items,
+        // Decided here rather than in the table, so the highlighted rows and the
+        // number on the notification bell can never tell different stories.
+        isNew: isUnseenOrder(order),
       })),
       pagination: {
         page,

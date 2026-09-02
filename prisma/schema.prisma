@@ -294,6 +294,14 @@ model Order {
   status OrderStatus @default(PENDING)
   notes  String?     @db.Text
 
+  /// When an admin first opened this order. Null means nobody has looked at it
+  /// yet, which is what drives the "new" indicator and the bell count.
+  ///
+  /// A timestamp rather than a boolean: "unseen" and "seen 3 days ago" are
+  /// different facts, and the second one is worth keeping once support starts
+  /// asking how long an order sat before anyone noticed it.
+  seenAt DateTime?
+
   items   OrderItem[]
   payment Payment?
 
@@ -304,6 +312,7 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@index([orderNumber])
+  @@index([seenAt])
 }
 
 model OrderItem {
