@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { useAdminFeedback } from "@/components/admin/feedback";
 import { ORDER_STATUSES, OrderStatusPill } from "@/components/admin/status-pill";
 import { cn, formatPrice } from "@/lib/utils";
 
@@ -22,9 +23,12 @@ type AdminOrder = {
 };
 
 export default function AdminOrdersPage() {
+  const { done, failed, confirm } = useAdminFeedback();
+
   const [orders, setOrders] = useState<AdminOrder[] | null>(null);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
+  /** Reserved for a failed *load* — action outcomes go to the feedback ledger. */
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -67,15 +71,35 @@ export default function AdminOrdersPage() {
     void load();
   }, [load]);
 
-  async function changeStatus(order: AdminOrder, next: string) {
+  /**
+   * `select` is the element that fired the change, passed in so a declined
+   * confirm can be put back. The dropdown is controlled by `order.status`, but
+   * declining changes no state, so nothing re-renders and the select would sit
+   * there showing a status the order never got.
+   */
+  async function changeStatus(
+    order: AdminOrder,
+    next: string,
+    select: HTMLSelectElement,
+  ) {
     if (next === order.status) return;
 
-    // Restocking is a side effect the admin should be aware of before it runs.
+    // Restocking is a side effect the admin should be aware of before it runs,
+    // and it isn't symmetrical — see the sheet's wording.
     if (next === "CANCELLED" || next === "REFUNDED") {
-      const confirmed = window.confirm(
-        `Mark ${order.orderNumber} as ${next.toLowerCase()}? The items will be returned to stock.`,
-      );
-      if (!confirmed) return;
+      const confirmed = await confirm({
+        impact: "Adjusts stock",
+        title: `Mark ${order.orderNumber} as ${next.toLowerCase()}?`,
+        detail:
+          "Every item on the order goes back into stock. Moving the status on again later does not take it out again, so stock would need a manual correction.",
+        action: next === "CANCELLED" ? "Mark cancelled" : "Mark refunded",
+        tone: "danger",
+      });
+
+      if (!confirmed) {
+        select.value = order.status;
+        return;
+      }
     }
 
     setUpdatingId(order.id);
@@ -90,9 +114,17 @@ export default function AdminOrdersPage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Could not update the order.");
 
+      done(
+        "Status updated",
+        body.restocked
+          ? `${order.orderNumber} is ${next.toLowerCase()} and its items are back in stock.`
+          : `${order.orderNumber} is now ${next.toLowerCase()}.`,
+      );
+
       await load();
     } catch (err) {
-      setError((err as Error).message);
+      failed("Couldn't update", (err as Error).message);
+      select.value = order.status;
     } finally {
       setUpdatingId(null);
     }
@@ -240,9 +272,13 @@ export default function AdminOrdersPage() {
                         <select
                           value={order.status}
                           disabled={updatingId === order.id}
-                          onChange={(event) =>
-                            changeStatus(order, event.target.value)
-                          }
+                          onChange={(event) => {
+                            // Captured synchronously: React clears
+                            // `currentTarget` once the handler returns, and
+                            // `changeStatus` awaits a confirm before it needs it.
+                            const select = event.currentTarget;
+                            void changeStatus(order, select.value, select);
+                          }}
                           aria-label={`Change status of ${order.orderNumber}`}
                           className="rounded-lg border border-ink-200 bg-surface px-2 py-1 text-xs text-ink-700 outline-none focus:border-ink-900 disabled:opacity-50"
                         >

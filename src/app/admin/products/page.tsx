@@ -4,6 +4,7 @@ import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
+import { useAdminFeedback } from "@/components/admin/feedback";
 import { ProductFormDialog } from "@/components/admin/product-form";
 import { cn, formatPrice } from "@/lib/utils";
 
@@ -30,8 +31,12 @@ const FILTERS = [
 ];
 
 export default function AdminProductsPage() {
+  const { done, failed, confirm } = useAdminFeedback();
+
   const [products, setProducts] = useState<AdminProduct[] | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
+  /** Reserved for a failed *load* — the message stands in for the missing table.
+   *  Action outcomes go to the feedback ledger instead. */
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -78,10 +83,15 @@ export default function AdminProductsPage() {
   }, [load]);
 
   async function handleDelete(product: AdminProduct) {
-    // Deactivating is reversible, so a single confirm is proportionate.
-    const confirmed = window.confirm(
-      `Deactivate “${product.name}”? It will be hidden from the storefront but kept on past orders.`,
-    );
+    // Deactivating is reversible, so the sheet says so and puts the keyboard on
+    // the action rather than on Cancel.
+    const confirmed = await confirm({
+      impact: "Reversible",
+      title: `Deactivate “${product.name}”?`,
+      detail:
+        "It comes off the storefront immediately and stays on past orders. Switch Active back on from the edit form to list it again.",
+      action: "Deactivate",
+    });
     if (!confirmed) return;
 
     const res = await fetch(`/api/admin/products/${product.id}`, {
@@ -90,10 +100,14 @@ export default function AdminProductsPage() {
 
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "Could not deactivate the product.");
+      failed(
+        "Couldn't deactivate",
+        body.error ?? `“${product.name}” is unchanged.`,
+      );
       return;
     }
 
+    done("Deactivated", `“${product.name}” is off the storefront.`);
     void load();
   }
 

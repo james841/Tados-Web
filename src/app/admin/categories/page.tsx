@@ -14,6 +14,7 @@ import {
   CategoryFormDialog,
   type AdminCategory,
 } from "@/components/admin/category-form";
+import { useAdminFeedback } from "@/components/admin/feedback";
 import { ProductFormDialog } from "@/components/admin/product-form";
 import { resolveCategoryIcon } from "@/lib/category-icons";
 import { cn, formatPrice } from "@/lib/utils";
@@ -45,7 +46,10 @@ type CategoryProduct = {
 };
 
 export default function AdminCategoriesPage() {
+  const { done, failed, confirm } = useAdminFeedback();
+
   const [categories, setCategories] = useState<AdminCategory[] | null>(null);
+  /** Reserved for a failed *load* — action outcomes go to the feedback ledger. */
   const [error, setError] = useState<string | null>(null);
 
   /** Category being edited, or `null` for the create form. `undefined` = closed. */
@@ -134,6 +138,10 @@ export default function AdminCategoriesPage() {
    * The homepage toggle writes straight through — a dialog round-trip for one
    * boolean would be tedious. Flipped locally first so the checkbox responds
    * immediately, and reverted by a reload if the request fails.
+   *
+   * Nothing is reported on success: the checkbox moving *is* the confirmation,
+   * and a ledger entry per tick would be noise. Only the revert needs saying,
+   * because a checkbox snapping back on its own has no explanation otherwise.
    */
   async function toggleFeatured(category: AdminCategory, featured: boolean) {
     setCategories(
@@ -150,15 +158,23 @@ export default function AdminCategoriesPage() {
 
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "Could not update the category.");
+      failed(
+        "Couldn't update",
+        body.error ?? `“${category.name}” is back as it was.`,
+      );
       void load();
     }
   }
 
   async function handleDelete(category: AdminCategory) {
-    const confirmed = window.confirm(
-      `Delete “${category.name}” permanently? This can't be undone.`,
-    );
+    const confirmed = await confirm({
+      impact: "Permanent",
+      title: `Delete “${category.name}”?`,
+      detail:
+        "This can't be undone. Only empty categories can be deleted, so no products or sub-categories will move.",
+      action: "Delete",
+      tone: "danger",
+    });
     if (!confirmed) return;
 
     const res = await fetch(`/api/admin/categories/${category.id}`, {
@@ -167,11 +183,11 @@ export default function AdminCategoriesPage() {
 
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "Could not delete the category.");
+      failed("Couldn't delete", body.error ?? `“${category.name}” is still here.`);
       return;
     }
 
-    setError(null);
+    done("Deleted", `“${category.name}” is gone.`);
     void load();
   }
 

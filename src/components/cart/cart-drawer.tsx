@@ -182,6 +182,7 @@ function CartRow({ item }: { item: CartItem }) {
   const removeItem = useCart((s) => s.removeItem);
 
   const atStockLimit = item.quantity >= item.stock;
+  const soldOut = item.stock <= 0;
 
   return (
     <li className="flex gap-4 py-5">
@@ -255,7 +256,11 @@ function CartRow({ item }: { item: CartItem }) {
           </button>
         </div>
 
-        {atStockLimit ? (
+        {soldOut ? (
+          <p className="mt-2 text-xs font-medium text-red-600">
+            Out of stock — remove it to check out
+          </p>
+        ) : atStockLimit ? (
           <p className="mt-2 text-xs font-medium text-amber-700">
             Only {item.stock} left in stock
           </p>

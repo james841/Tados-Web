@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import type { ReactNode } from "react";
 
 import { CartDrawer } from "@/components/cart/cart-drawer";
+import { CartSync } from "@/components/cart/cart-sync";
 import { CurrencyProvider } from "@/components/currency/currency-provider";
 import type { CurrencyCode, CurrencyMeta } from "@/lib/currency-shared";
 
@@ -20,6 +21,9 @@ import type { CurrencyCode, CurrencyMeta } from "@/lib/currency-shared";
  * The cart drawer lives here rather than in the header so it sits outside the
  * sticky header's stacking context — inside it, the backdrop would be painted
  * under the page instead of over it.
+ *
+ * CartSync sits alongside it, refreshing a restored cart's stored names, prices
+ * and stock against the database once per page load.
  */
 export function Providers({
   currency,
@@ -41,6 +45,7 @@ export function Providers({
       >
         {children}
         <CartDrawer />
+        <CartSync />
       </CurrencyProvider>
     </SessionProvider>
   );

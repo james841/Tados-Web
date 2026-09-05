@@ -1,9 +1,10 @@
 "use client";
 
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { cn, slugify } from "@/lib/utils";
+import { AdminDialog } from "@/components/admin/admin-dialog";
+import { useAdminFeedback } from "@/components/admin/feedback";
 import { ImageUploader } from "@/components/admin/image-uploader";
 
 /**
@@ -16,6 +17,12 @@ import { ImageUploader } from "@/components/admin/image-uploader";
  * Name and SKU accept any character. The web address is derived from the name
  * and cleaned server-side, so punctuation, accents or a script with no Latin
  * equivalent in the name can never block a save.
+ *
+ * Renaming a saved product re-derives its address, and the form says which
+ * address it is moving to. Leaving the address behind was the bug: a product
+ * renamed to "Smart video doorbell" kept living at its original
+ * /products/smart-life-tuya-wifi-hd-video-doorbell-… address, so the old name
+ * was still what anyone saw in the URL and in a link they shared.
  */
 
 type Option = { id: string; label: string };
@@ -92,13 +99,20 @@ export function ProductFormDialog({
 }) {
   const isEdit = product !== null;
 
+  const { done } = useAdminFeedback();
+
   const [form, setForm] = useState<FormState>(EMPTY);
   const [categories, setCategories] = useState<Option[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  // Once an admin edits the slug by hand, stop overwriting it from the name.
-  const [slugTouched, setSlugTouched] = useState(isEdit);
+  // Once an admin edits the address by hand, stop overwriting it from the name.
+  // This starts false even on edit, which is the whole point: it used to start
+  // true, so renaming a saved product left its address on the old name forever
+  // and the old name stayed in the URL, in shared links and in search results.
+  const [slugTouched, setSlugTouched] = useState(false);
+  // The address as last saved, so a rename can say what it's about to change.
+  const [savedSlug, setSavedSlug] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/categories")
@@ -111,12 +125,16 @@ export function ProductFormDialog({
   useEffect(() => {
     if (!product) {
       setForm(EMPTY);
+      setSlugTouched(false);
+      setSavedSlug("");
       return;
     }
 
     fetch(`/api/admin/products/${product.id}`)
       .then((res) => res.json())
-      .then((body) =>
+      .then((body) => {
+        setSlugTouched(false);
+        setSavedSlug(body.slug ?? "");
         setForm({
           name: body.name ?? "",
           slug: body.slug ?? "",
@@ -138,23 +156,23 @@ export function ProductFormDialog({
           isFeatured: body.isFeatured ?? false,
           isBestseller: body.isBestseller ?? false,
           isNewArrival: body.isNewArrival ?? false,
-        }),
-      )
+        });
+      })
       .catch(() => setError("Could not load this product."));
   }, [product]);
 
-  // Escape closes, matching the cart drawer's behaviour.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  // Escape closes, and the page behind stays put — see AdminDialog.
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
+
+  // What will actually be saved as the address, and whether that moves the
+  // product. A rename rewriting the address is the behaviour we want — but it
+  // does break any link already out there, so the form says so rather than
+  // letting it be discovered from a 404.
+  const nextSlug = resolveSlug(form);
+  const slugWillChange = isEdit && savedSlug !== "" && nextSlug !== savedSlug;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -197,6 +215,22 @@ export function ProductFormDialog({
         throw new Error(body.error ?? "Could not save the product.");
       }
 
+      // Whether it's visible is the thing most easily got wrong here — a
+      // product saved with Active off is a save that looks like it did nothing.
+      // The moved address is worth saying too: the rename is deliberate, but
+      // any link already shared for the old one has just stopped working.
+      done(
+        isEdit ? "Saved" : "Created",
+        [
+          form.isActive
+            ? `“${form.name}” is live on the storefront.`
+            : `“${form.name}” is saved, but Active is off — the storefront won't list it.`,
+          slugWillChange ? `Its link is now /products/${nextSlug}.` : null,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+
       onSaved();
     } catch (err) {
       setError((err as Error).message);
@@ -206,218 +240,198 @@ export function ProductFormDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="product-form-title"
-        className="w-full max-w-2xl rounded-card bg-surface shadow-xl"
-      >
-        <header className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
-          <h2
-            id="product-form-title"
-            className="text-lg font-bold text-ink-900"
-          >
-            {isEdit ? "Edit product" : "New product"}
-          </h2>
+    <AdminDialog
+      title={isEdit ? "Edit product" : "New product"}
+      titleId="product-form-title"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      error={error}
+      footer={
+        <>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
-            className="flex size-8 items-center justify-center rounded-full bg-ink-100 text-ink-600 transition-colors hover:bg-ink-200"
+            className="rounded-lg border border-ink-300 px-4 py-2.5 text-sm font-semibold text-ink-700 transition-colors hover:border-ink-900"
           >
-            <X size={16} />
+            Cancel
           </button>
-        </header>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-ink-900 px-5 py-2.5 text-sm font-semibold text-ink-50 transition-colors hover:bg-ink-800 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : isEdit ? "Save changes" : "Create product"}
+          </button>
+        </>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Name"
+          error={fieldErrors.name}
+          className="sm:col-span-2"
+          hint="Anything you like — punctuation, accents and symbols are all fine."
+        >
+          <input
+            required
+            value={form.name}
+            onChange={(event) => {
+              update("name", event.target.value);
+              if (!slugTouched) update("slug", slugify(event.target.value));
+            }}
+            className={inputClass}
+          />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="px-5 py-5">
-          {error ? (
-            <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </p>
-          ) : null}
+        <Field
+          label="Web address"
+          error={fieldErrors.slug}
+          warning={
+            slugWillChange
+              ? `Saving moves this product to /products/${nextSlug}. The old link stops working — type the old address back in here if you need to keep it.`
+              : undefined
+          }
+          hint="The end of the product's link. Follows the name — leave it alone unless you want a shorter one."
+        >
+          <input
+            value={form.slug}
+            onChange={(event) => {
+              setSlugTouched(true);
+              update("slug", event.target.value);
+            }}
+            className={inputClass}
+          />
+        </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Name"
-              error={fieldErrors.name}
-              className="sm:col-span-2"
-              hint="Anything you like — punctuation, accents and symbols are all fine."
-            >
-              <input
-                required
-                value={form.name}
-                onChange={(event) => {
-                  update("name", event.target.value);
-                  if (!slugTouched) update("slug", slugify(event.target.value));
-                }}
-                className={inputClass}
-              />
-            </Field>
+        <Field
+          label="SKU"
+          error={fieldErrors.sku}
+          hint="Your own code for this item, e.g. TDS-LOCK-01. Must be different for every product."
+        >
+          <input
+            required
+            value={form.sku}
+            onChange={(event) => update("sku", event.target.value)}
+            className={inputClass}
+          />
+        </Field>
 
-            <Field
-              label="Web address"
-              error={fieldErrors.slug}
-              hint="The end of the product's link. Filled in from the name — leave it alone unless you want a shorter one."
-            >
-              <input
-                value={form.slug}
-                onChange={(event) => {
-                  setSlugTouched(true);
-                  update("slug", event.target.value);
-                }}
-                className={inputClass}
-              />
-            </Field>
+        <Field
+          label="Description"
+          error={fieldErrors.description}
+          className="sm:col-span-2"
+        >
+          <textarea
+            required
+            rows={3}
+            value={form.description}
+            onChange={(event) => update("description", event.target.value)}
+            className={cn(inputClass, "resize-none")}
+          />
+        </Field>
 
-            <Field
-              label="SKU"
-              error={fieldErrors.sku}
-              hint="Your own code for this item, e.g. TDS-LOCK-01. Must be different for every product."
-            >
-              <input
-                required
-                value={form.sku}
-                onChange={(event) => update("sku", event.target.value)}
-                className={inputClass}
-              />
-            </Field>
+        <Field label="Price (R)" error={fieldErrors.price}>
+          <input
+            required
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.price}
+            onChange={(event) => update("price", event.target.value)}
+            className={inputClass}
+          />
+        </Field>
 
-            <Field
-              label="Description"
-              error={fieldErrors.description}
-              className="sm:col-span-2"
-            >
-              <textarea
-                required
-                rows={3}
-                value={form.description}
-                onChange={(event) => update("description", event.target.value)}
-                className={cn(inputClass, "resize-none")}
-              />
-            </Field>
+        <Field label="Compare-at price (R)" hint="Optional — shows as a strikethrough">
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.compareAtPrice}
+            onChange={(event) =>
+              update("compareAtPrice", event.target.value)
+            }
+            className={inputClass}
+          />
+        </Field>
 
-            <Field label="Price (R)" error={fieldErrors.price}>
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.price}
-                onChange={(event) => update("price", event.target.value)}
-                className={inputClass}
-              />
-            </Field>
+        <Field label="Stock" error={fieldErrors.stock}>
+          <input
+            required
+            type="number"
+            min="0"
+            value={form.stock}
+            onChange={(event) => update("stock", event.target.value)}
+            className={inputClass}
+          />
+        </Field>
 
-            <Field label="Compare-at price (R)" hint="Optional — shows as a strikethrough">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.compareAtPrice}
-                onChange={(event) =>
-                  update("compareAtPrice", event.target.value)
-                }
-                className={inputClass}
-              />
-            </Field>
+        <Field label="Low-stock alert at">
+          <input
+            type="number"
+            min="0"
+            value={form.lowStockAt}
+            onChange={(event) => update("lowStockAt", event.target.value)}
+            className={inputClass}
+          />
+        </Field>
 
-            <Field label="Stock" error={fieldErrors.stock}>
-              <input
-                required
-                type="number"
-                min="0"
-                value={form.stock}
-                onChange={(event) => update("stock", event.target.value)}
-                className={inputClass}
-              />
-            </Field>
+        <Field label="Category" error={fieldErrors.categoryId}>
+          <select
+            required
+            value={form.categoryId}
+            onChange={(event) => update("categoryId", event.target.value)}
+            className={inputClass}
+          >
+            <option value="">Select a category…</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+        </Field>
 
-            <Field label="Low-stock alert at">
-              <input
-                type="number"
-                min="0"
-                value={form.lowStockAt}
-                onChange={(event) => update("lowStockAt", event.target.value)}
-                className={inputClass}
-              />
-            </Field>
-
-            <Field label="Category" error={fieldErrors.categoryId}>
-              <select
-                required
-                value={form.categoryId}
-                onChange={(event) => update("categoryId", event.target.value)}
-                className={inputClass}
-              >
-                <option value="">Select a category…</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field
-              label="Photos"
-              error={fieldErrors.images}
-              className="sm:col-span-2"
-              hint="Up to 10. The first is the one shown on product cards and search results — use the arrows to reorder."
-            >
-              <ImageUploader
-                folder="products"
-                multiple
-                max={10}
-                value={form.images}
-                onChange={(urls) => update("images", urls)}
-              />
-            </Field>
-          </div>
-
-          <fieldset className="mt-5 flex flex-wrap gap-4 border-t border-ink-200 pt-4">
-            <legend className="sr-only">Visibility flags</legend>
-            <Toggle
-              label="Active"
-              checked={form.isActive}
-              onChange={(value) => update("isActive", value)}
-            />
-            <Toggle
-              label="Featured"
-              checked={form.isFeatured}
-              onChange={(value) => update("isFeatured", value)}
-            />
-            <Toggle
-              label="Bestseller"
-              checked={form.isBestseller}
-              onChange={(value) => update("isBestseller", value)}
-            />
-            <Toggle
-              label="New arrival"
-              checked={form.isNewArrival}
-              onChange={(value) => update("isNewArrival", value)}
-            />
-          </fieldset>
-
-          <div className="mt-6 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-ink-300 px-4 py-2.5 text-sm font-semibold text-ink-700 transition-colors hover:border-ink-900"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-ink-900 px-5 py-2.5 text-sm font-semibold text-ink-50 transition-colors hover:bg-ink-800 disabled:opacity-50"
-            >
-              {saving ? "Saving…" : isEdit ? "Save changes" : "Create product"}
-            </button>
-          </div>
-        </form>
+        <Field
+          label="Photos"
+          error={fieldErrors.images}
+          className="sm:col-span-2"
+          hint="Up to 10. The first is the one shown on product cards and search results — use the arrows to reorder."
+        >
+          <ImageUploader
+            folder="products"
+            multiple
+            max={10}
+            value={form.images}
+            onChange={(urls) => update("images", urls)}
+          />
+        </Field>
       </div>
-    </div>
+
+      <fieldset className="mt-5 flex flex-wrap gap-4 border-t border-ink-200 pt-4">
+        <legend className="sr-only">Visibility flags</legend>
+        <Toggle
+          label="Active"
+          checked={form.isActive}
+          onChange={(value) => update("isActive", value)}
+        />
+        <Toggle
+          label="Featured"
+          checked={form.isFeatured}
+          onChange={(value) => update("isFeatured", value)}
+        />
+        <Toggle
+          label="Bestseller"
+          checked={form.isBestseller}
+          onChange={(value) => update("isBestseller", value)}
+        />
+        <Toggle
+          label="New arrival"
+          checked={form.isNewArrival}
+          onChange={(value) => update("isNewArrival", value)}
+        />
+      </fieldset>
+    </AdminDialog>
   );
 }
 
@@ -427,12 +441,15 @@ const inputClass =
 function Field({
   label,
   hint,
+  warning,
   error,
   className,
   children,
 }: {
   label: string;
   hint?: string;
+  /** Shown instead of the hint. For consequences of a valid change, not errors. */
+  warning?: string;
   error?: string[];
   className?: string;
   children: React.ReactNode;
@@ -445,6 +462,10 @@ function Field({
       {children}
       {error?.length ? (
         <span className="mt-1 block text-xs text-red-600">{error[0]}</span>
+      ) : warning ? (
+        <span className="mt-1 block text-xs font-medium text-accent-600">
+          {warning}
+        </span>
       ) : hint ? (
         <span className="mt-1 block text-xs text-ink-400">{hint}</span>
       ) : null}

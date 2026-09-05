@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { AdminFeedbackProvider } from "@/components/admin/feedback";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { AdminThemeProvider } from "@/components/admin/theme-provider";
 import { IdleTimeout } from "@/components/admin/idle-timeout";
@@ -45,7 +46,11 @@ export default async function AdminLayout({
       <IdleTimeout />
       <AdminSidebar user={{ name: user.name, email: user.email }} />
       <main className="min-w-0 flex-1 px-5 py-6 lg:px-8 lg:py-8">
-        {children}
+        {/* Inside the theme wrapper, not portalled to `document.body`: the
+            `.dark` class is scoped to that wrapper, so a portalled ledger would
+            paint in light mode over a dark panel. Its own elements are `fixed`,
+            so sitting inside `<main>` costs nothing in layout terms. */}
+        <AdminFeedbackProvider>{children}</AdminFeedbackProvider>
       </main>
     </AdminThemeProvider>
   );
