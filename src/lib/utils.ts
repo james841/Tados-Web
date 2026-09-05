@@ -26,11 +26,29 @@ export function toNumber(value: number | string | { toString(): string } | null 
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * "Smart Door Lock" -> "smart-door-lock", "Café Ø 21" -> "cafe-o-21".
+ *
+ * Accents are folded to their base letters rather than stripped, so a product
+ * named in any Latin script still produces a readable URL instead of losing
+ * half its characters. Returns "" when there is nothing left to work with —
+ * callers are expected to have a fallback, because a name written entirely in a
+ * non-Latin script is a legitimate name, not an error.
+ */
 export function slugify(input: string) {
   return input
+    .normalize("NFKD")
+    // The combining-marks block, left behind by NFKD once "é" has been split
+    // into "e" + accent.
+    .replace(/[̀-ͯ]/g, "")
+    // Letters NFKD can't decompose, because the stroke is part of the glyph.
+    .replace(/[øØ]/g, "o")
+    .replace(/[æÆ]/g, "ae")
+    .replace(/[đĐ]/g, "d")
+    .replace(/ß/g, "ss")
     .toLowerCase()
     .trim()
-    .replace(/['"]/g, "")
+    .replace(/['’"]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }

@@ -162,7 +162,7 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
           size="xl"
           className="mt-6"
         />
-        <p className="mt-1 text-xs text-ink-500">VAT included</p>
+        <p className="mt-1 text-xs text-ink-500">No hidden fees</p>
 
         {/* Key features from the product spec */}
         {product.features.length > 0 ? (

@@ -136,9 +136,10 @@ export async function POST(request: Request) {
           addressId: address.id,
           subtotal,
           shipping,
-          // VAT is already included in displayed prices, so it is not added on
-          // top here — recording 0 keeps the stored total equal to what the
-          // customer was shown and what PayFast will charge.
+          // No tax is charged on top of the displayed price. The column stays so
+          // the schema can carry tax later without a migration, but recording 0
+          // keeps the stored total equal to what the customer was shown and what
+          // PayFast will charge.
           tax: 0,
           discount: 0,
           total,

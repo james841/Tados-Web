@@ -19,11 +19,16 @@ export function jsonError(message: string, status: number, extra?: unknown) {
   return NextResponse.json({ error: message, details: extra }, { status });
 }
 
-/** Thrown by `requireAdmin` and mapped to a response by `handleRoute`. */
+/** Thrown by `requireAdmin` and mapped to a response by `handleRoute`.
+ *
+ * `details` is optional and keyed by field name, matching the shape Zod errors
+ * come back in — so a hand-thrown conflict can highlight the input that caused
+ * it instead of only showing a banner at the top of the form. */
 export class HttpError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly details?: Record<string, string[]>,
   ) {
     super(message);
   }
@@ -57,7 +62,7 @@ export async function handleRoute(fn: () => Promise<Response>) {
     return await fn();
   } catch (error) {
     if (error instanceof HttpError) {
-      return jsonError(error.message, error.status);
+      return jsonError(error.message, error.status, error.details);
     }
 
     if (error instanceof ZodError) {
@@ -65,17 +70,34 @@ export async function handleRoute(fn: () => Promise<Response>) {
     }
 
     // Unique-constraint violations are the one Prisma error worth naming:
-    // duplicate slug/SKU is a user mistake, not a server fault.
+    // duplicate slug/SKU is a user mistake, not a server fault. Routes that can
+    // predict a clash catch it first and say which record holds the value —
+    // this is the backstop, and it still has to land on the right input rather
+    // than as a banner reading "That sku is already taken", which sends an
+    // admin looking at a field they may never have typed in.
     if (
       typeof error === "object" &&
       error !== null &&
       "code" in error &&
       (error as { code: string }).code === "P2002"
     ) {
-      const target = (error as { meta?: { target?: string[] } }).meta?.target;
+      const target = (error as { meta?: { target?: string[] | string } }).meta
+        ?.target;
+      const fields = Array.isArray(target)
+        ? target
+        : typeof target === "string"
+          ? [target]
+          : [];
+
+      const label = fields.map(fieldLabel).join(" and ") || "value";
+      const message = `That ${label} is already used by another record. Try a different one.`;
+
       return jsonError(
-        `That ${target?.join(", ") ?? "value"} is already taken.`,
+        message,
         409,
+        fields.length
+          ? Object.fromEntries(fields.map((field) => [field, [message]]))
+          : undefined,
       );
     }
 
@@ -118,6 +140,18 @@ export async function handleRoute(fn: () => Promise<Response>) {
       500,
     );
   }
+}
+
+/** Column name -> what an admin calls it on screen. */
+function fieldLabel(field: string) {
+  const labels: Record<string, string> = {
+    sku: "SKU",
+    slug: "web address",
+    email: "email address",
+    name: "name",
+    orderNumber: "order number",
+  };
+  return labels[field] ?? field;
 }
 
 /** Parse a JSON body against a schema, rejecting malformed JSON up front. */

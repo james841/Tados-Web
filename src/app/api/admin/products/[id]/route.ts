@@ -1,5 +1,6 @@
 import { handleRoute, jsonOk, parseBody, requireAdmin, HttpError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { assertSkuIsFree, resolveProductSlug } from "@/lib/product-identity";
 import { invalidateCatalogueCache } from "@/lib/redis";
 import { toNumber } from "@/lib/utils";
 import { productUpdateSchema } from "@/lib/validators";
@@ -51,10 +52,18 @@ export async function PATCH(request: Request, { params }: Params) {
     const data = await parseBody(request, productUpdateSchema);
     const { images, ...fields } = data;
 
+    // Both checks exclude this product, so re-saving a form without touching
+    // either field can't make a product collide with itself.
+    if (fields.sku) await assertSkuIsFree(fields.sku, id);
+    const slug = fields.slug
+      ? await resolveProductSlug(fields.slug, id)
+      : undefined;
+
     const product = await prisma.product.update({
       where: { id },
       data: {
         ...fields,
+        ...(slug ? { slug } : {}),
         // Only touch the gallery when the client actually sent one. Replacing
         // wholesale is simpler than diffing and keeps `position` contiguous.
         ...(images

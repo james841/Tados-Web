@@ -89,7 +89,7 @@ const SECTIONS: PolicySection[] = [
     blocks: [
       {
         type: "p",
-        text: "Prices are displayed on the website and will indicate VAT treatment as applicable. The price applicable to an order is the price presented at checkout, subject to correction of obvious errors.",
+        text: "Prices are displayed on the website and no tax is added on top of them. The price applicable to an order is the price presented at checkout, subject to correction of obvious errors.",
       },
       {
         type: "note",

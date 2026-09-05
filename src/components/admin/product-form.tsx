@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { cn } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 import { ImageUploader } from "@/components/admin/image-uploader";
 
 /**
@@ -12,6 +12,10 @@ import { ImageUploader } from "@/components/admin/image-uploader";
  * Field errors come back from the API's Zod layer keyed by field name, so the
  * same validation runs regardless of whether the request came from this form
  * or from a script — the form just renders whatever the server objected to.
+ *
+ * Name and SKU accept any character. The web address is derived from the name
+ * and cleaned server-side, so punctuation, accents or a script with no Latin
+ * equivalent in the name can never block a save.
  */
 
 type Option = { id: string; label: string };
@@ -63,13 +67,18 @@ const EMPTY: FormState = {
   isNewArrival: true,
 };
 
-/** "Smart Door Lock" -> "smart-door-lock" */
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+/**
+ * The web address to save, given whatever the admin typed.
+ *
+ * Falls through name -> SKU -> a constant, because every one of those can
+ * legitimately slugify to nothing: a product named "智能门锁" has no Latin
+ * characters, and a SKU of "———" has none either. The server appends a suffix
+ * if the result is taken, so even "product" always saves.
+ */
+function resolveSlug(form: FormState) {
+  return (
+    slugify(form.slug) || slugify(form.name) || slugify(form.sku) || "product"
+  );
 }
 
 export function ProductFormDialog({
@@ -155,7 +164,7 @@ export function ProductFormDialog({
 
     const payload = {
       name: form.name,
-      slug: form.slug || slugify(form.name),
+      slug: resolveSlug(form),
       sku: form.sku,
       description: form.description,
       price: form.price,
@@ -229,7 +238,12 @@ export function ProductFormDialog({
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name" error={fieldErrors.name} className="sm:col-span-2">
+            <Field
+              label="Name"
+              error={fieldErrors.name}
+              className="sm:col-span-2"
+              hint="Anything you like — punctuation, accents and symbols are all fine."
+            >
               <input
                 required
                 value={form.name}
@@ -241,9 +255,12 @@ export function ProductFormDialog({
               />
             </Field>
 
-            <Field label="Slug" error={fieldErrors.slug}>
+            <Field
+              label="Web address"
+              error={fieldErrors.slug}
+              hint="The end of the product's link. Filled in from the name — leave it alone unless you want a shorter one."
+            >
               <input
-                required
                 value={form.slug}
                 onChange={(event) => {
                   setSlugTouched(true);
@@ -253,7 +270,11 @@ export function ProductFormDialog({
               />
             </Field>
 
-            <Field label="SKU" error={fieldErrors.sku}>
+            <Field
+              label="SKU"
+              error={fieldErrors.sku}
+              hint="Your own code for this item, e.g. TDS-LOCK-01. Must be different for every product."
+            >
               <input
                 required
                 value={form.sku}

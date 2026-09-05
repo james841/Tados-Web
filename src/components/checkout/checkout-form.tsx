@@ -536,7 +536,9 @@ export function CheckoutForm() {
             <Price price={total} className="text-2xl font-bold" />
           </div>
 
-          <p className="mt-3 text-xs text-ink-500">VAT included.</p>
+          <p className="mt-3 text-xs text-ink-500">
+            No hidden fees — this is the amount you pay.
+          </p>
           <CurrencyNotice className="mt-2" />
         </div>
       </aside>

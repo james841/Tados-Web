@@ -131,7 +131,6 @@ function renderItemRows(order: OrderForEmail) {
 function renderTotalsRows(order: OrderForEmail) {
   const shipping = toNumber(order.shipping);
   const discount = toNumber(order.discount);
-  const tax = toNumber(order.tax);
 
   const line = (label: string, value: string) => `
       <tr>
@@ -143,7 +142,6 @@ function renderTotalsRows(order: OrderForEmail) {
       ${line("Subtotal", formatPrice(toNumber(order.subtotal)))}
       ${line("Delivery", shipping === 0 ? "Free" : formatPrice(shipping))}
       ${discount > 0 ? line("Discount", `−${formatPrice(discount)}`) : ""}
-      ${tax > 0 ? line("VAT", formatPrice(tax)) : ""}
       <tr>
         <td style="padding:12px 0 0;border-top:2px solid ${brand600};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${ink900};">Total paid</td>
         <td align="right" style="padding:12px 0 0;border-top:2px solid ${brand600};font-family:${EMAIL_FONT};font-size:18px;font-weight:700;color:${ink900};white-space:nowrap;">${formatPrice(toNumber(order.total))}</td>

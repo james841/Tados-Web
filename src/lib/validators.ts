@@ -1,24 +1,27 @@
 import { z } from "zod";
 
-import { SA_PROVINCES } from "@/lib/utils";
+import { SA_PROVINCES, slugify } from "@/lib/utils";
 
 /**
  * Request shapes for the admin API.
  *
  * Kept separate from the route handlers so the client-side forms can import the
- * same schemas and validate before a round-trip. `slug` and `sku` are the only
- * fields with a format constraint — everything else is bounded rather than
- * patterned, to avoid rejecting legitimate product copy.
+ * same schemas and validate before a round-trip.
+ *
+ * Nothing here constrains which characters a name or a SKU may contain — a
+ * product can be called anything, and a supplier's part number is whatever the
+ * supplier printed on the box. Only the slug is normalised, and it is cleaned
+ * rather than rejected, because it has to survive being put in a URL.
  */
 
 const slug = z
   .string()
-  .min(1, "Slug is required.")
   .max(120)
-  .regex(
-    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-    "Use lowercase letters, numbers and single hyphens.",
-  );
+  // Transformed, not pattern-matched: an admin who types "Smart Lock 2!" here
+  // means "smart-lock-2", and bouncing the whole save back over a punctuation
+  // mark is a rule the URL can quietly enforce for itself.
+  .transform(slugify)
+  .refine((value) => value.length > 0, "Slug is required.");
 
 /** Money arrives as a string from `<input type="number">`; coerce and bound. */
 const money = z.coerce
@@ -27,9 +30,9 @@ const money = z.coerce
   .max(9_999_999);
 
 export const productCreateSchema = z.object({
-  name: z.string().min(2, "Name is required.").max(200),
+  name: z.string().trim().min(1, "Name is required.").max(200),
   slug,
-  sku: z.string().min(1, "SKU is required.").max(64),
+  sku: z.string().trim().min(1, "SKU is required.").max(64),
   tagline: z.string().max(200).optional().nullable(),
   description: z.string().min(1, "Description is required."),
 
@@ -77,7 +80,7 @@ export const productUpdateSchema = productCreateSchema.partial();
  * `parentId` accepts `null` to promote a child to a top-level category.
  */
 export const categoryCreateSchema = z.object({
-  name: z.string().min(2, "Name is required.").max(120),
+  name: z.string().trim().min(1, "Name is required.").max(120),
   slug,
   description: z.string().max(500).optional().nullable(),
   image: z.string().max(500).optional().nullable(),

@@ -228,8 +228,6 @@ export const PRODUCTS_PER_PAGE = 12;
  */
 export const FREE_SHIPPING_THRESHOLD = 1500;
 export const STANDARD_SHIPPING_FEE = 120;
-/** South African VAT, already included in displayed prices. */
-export const VAT_RATE = 0.15;
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   PENDING: "Pending payment",

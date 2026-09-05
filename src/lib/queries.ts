@@ -4,6 +4,13 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { cached, cacheKeys } from "@/lib/redis";
+import {
+  SEARCH_MIN_LENGTH,
+  SEARCH_SUGGESTION_LIMIT,
+  normaliseSearchTerm,
+  type SearchLanding,
+  type SearchSuggestion,
+} from "@/lib/search";
 import { PRODUCTS_PER_PAGE, type SortOption } from "@/lib/constants";
 import { toNumber } from "@/lib/utils";
 
@@ -508,25 +515,105 @@ export async function getAllProductSlugs() {
 }
 
 // ---------------------------------------------------------------
-// Search (used by the header autocomplete)
+// Search (header dropdown)
 // ---------------------------------------------------------------
 
-export async function searchProducts(term: string, limit = 6) {
-  if (!term || term.trim().length < 2) return [];
+/**
+ * The threshold, the shapes and the term normalisation live in `@/lib/search`,
+ * because the browser needs them too and this module is server-only.
+ */
+const searchSuggestionSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  price: true,
+  compareAtPrice: true,
+  stock: true,
+  category: { select: { name: true } },
+  images: { select: { url: true }, orderBy: { position: "asc" }, take: 1 },
+} satisfies Prisma.ProductSelect;
 
-  const rows = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      OR: [
-        { name: { contains: term, mode: "insensitive" } },
-        { tagline: { contains: term, mode: "insensitive" } },
-        { category: { name: { contains: term, mode: "insensitive" } } },
+type SearchSuggestionRow = Prisma.ProductGetPayload<{
+  select: typeof searchSuggestionSelect;
+}>;
+
+function toSuggestion(row: SearchSuggestionRow): SearchSuggestion {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    price: toNumber(row.price),
+    compareAtPrice: row.compareAtPrice ? toNumber(row.compareAtPrice) : null,
+    image: row.images[0]?.url ?? null,
+    categoryName: row.category.name,
+    inStock: row.stock > 0,
+  };
+}
+
+/**
+ * Suggestions for the dropdown.
+ *
+ * Cached for five minutes per normalised term: the same handful of words —
+ * "lock", "camera", "alarm" — are what almost everyone types, so in practice the
+ * database sees each popular search once per window no matter how many people
+ * run it.
+ */
+export async function getSearchSuggestions(
+  rawTerm: string,
+): Promise<SearchSuggestion[]> {
+  const term = normaliseSearchTerm(rawTerm);
+  if (term.length < SEARCH_MIN_LENGTH) return [];
+
+  return cached(cacheKeys.searchTerm(term), 300, async () => {
+    const rows = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { name: { contains: term, mode: "insensitive" } },
+          { tagline: { contains: term, mode: "insensitive" } },
+          { sku: { contains: term, mode: "insensitive" } },
+          { category: { name: { contains: term, mode: "insensitive" } } },
+          { brand: { name: { contains: term, mode: "insensitive" } } },
+        ],
+      },
+      // In-stock first: a dropdown that leads with something unbuyable wastes
+      // the click. Then the products the shop already knows sell.
+      orderBy: [
+        { stock: "desc" },
+        { isBestseller: "desc" },
+        { ratingCount: "desc" },
       ],
-    },
-    orderBy: [{ isBestseller: "desc" }, { ratingCount: "desc" }],
-    take: limit,
-    select: productCardSelect,
-  });
+      take: SEARCH_SUGGESTION_LIMIT,
+      select: searchSuggestionSelect,
+    });
 
-  return rows.map(toProductCard);
+    return rows.map(toSuggestion);
+  });
+}
+
+/**
+ * What the dropdown shows before anything is typed.
+ *
+ * Cached for half an hour and identical for every visitor, so opening the search
+ * box is free — the panel is never empty, and idling in it costs nothing.
+ */
+export async function getSearchLanding(): Promise<SearchLanding> {
+  return cached(cacheKeys.searchLanding, 1800, async () => {
+    const [products, categories] = await Promise.all([
+      prisma.product.findMany({
+        where: { isActive: true, isBestseller: true, stock: { gt: 0 } },
+        orderBy: [{ ratingCount: "desc" }, { ratingAvg: "desc" }],
+        take: SEARCH_SUGGESTION_LIMIT,
+        select: searchSuggestionSelect,
+      }),
+      prisma.category.findMany({
+        where: { parentId: { not: null }, featured: true },
+        orderBy: [{ position: "asc" }, { name: "asc" }],
+        take: 6,
+        select: { name: true, slug: true },
+      }),
+    ]);
+
+    return { products: products.map(toSuggestion), categories };
+  });
 }

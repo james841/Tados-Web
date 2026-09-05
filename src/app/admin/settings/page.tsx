@@ -12,7 +12,6 @@ import {
   FREE_SHIPPING_THRESHOLD,
   SITE,
   STANDARD_SHIPPING_FEE,
-  VAT_RATE,
 } from "@/lib/constants";
 
 export const metadata = {
@@ -85,9 +84,9 @@ export default function AdminSettingsPage() {
             note="Internal pricing rule only — not advertised to customers"
           />
           <Row
-            label="VAT"
-            value={`${VAT_RATE * 100}%`}
-            note="Included in all displayed prices"
+            label="Tax"
+            value="Not charged"
+            note="The price shown is the price paid — no tax is added at checkout"
           />
           <Row
             label="Settlement currency"

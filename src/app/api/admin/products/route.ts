@@ -8,6 +8,7 @@ import {
   requireAdmin,
 } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { assertSkuIsFree, resolveProductSlug } from "@/lib/product-identity";
 import { invalidateCatalogueCache } from "@/lib/redis";
 import { toNumber } from "@/lib/utils";
 import { productCreateSchema } from "@/lib/validators";
@@ -123,9 +124,16 @@ export async function POST(request: Request) {
     // it a default, so it needs a fallback here even though Zod fills it in.
     const { images = [], ...fields } = data;
 
+    // Checked before the insert so the admin gets told which product holds the
+    // SKU, rather than a bare constraint violation.
+    await assertSkuIsFree(fields.sku);
+
     const product = await prisma.product.create({
       data: {
         ...fields,
+        // Two products can legitimately share a name; they can't share a URL.
+        // Disambiguated here instead of refusing the save.
+        slug: await resolveProductSlug(fields.slug),
         // Position is derived from array order — the form reorders the array
         // rather than asking an admin to type index numbers.
         images: {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageCircle, Search, ShoppingBag, Menu, Phone, X } from "lucide-react";
+import { MessageCircle, ShoppingBag, Menu, Phone, X } from "lucide-react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -9,6 +9,7 @@ import { signOut, useSession } from "next-auth/react";
 import { CurrencySwitcher } from "@/components/currency/currency-switcher";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { LogoLink } from "@/components/layout/logo";
+import { SearchCommand } from "@/components/layout/search-command";
 import { DELIVERY_PROMISE, SITE, whatsappLink } from "@/lib/constants";
 import type { CategoryNode } from "@/lib/queries";
 import { useCart, selectCartCount } from "@/store/cart";
@@ -98,13 +99,7 @@ export function Header({ categories = [] }: { categories?: CategoryNode[] }) {
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <CurrencySwitcher className="hidden sm:block" />
 
-            <Link
-              href="/search"
-              className="flex size-10 items-center justify-center rounded-lg text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900"
-              aria-label="Search"
-            >
-              <Search size={20} />
-            </Link>
+            <SearchCommand />
 
             <AccountMenu />
 

@@ -200,6 +200,9 @@ export const cacheKeys = {
   categoryProducts: (slug: string, query: string) =>
     `category:${slug}:${query}`,
   brands: "brands:all",
+  /** One entry per normalised search term — see `normaliseSearchTerm`. */
+  searchTerm: (term: string) => `search:q:${term}`,
+  searchLanding: "search:landing",
   adminStats: "admin:stats",
   sitemapProducts: "sitemap:products",
 } as const;
@@ -212,6 +215,7 @@ export async function invalidateCatalogueCache(): Promise<void> {
     cacheInvalidatePrefix("product:"),
     cacheInvalidatePrefix("category:"),
     cacheInvalidatePrefix("brands:"),
+    cacheInvalidatePrefix("search:"),
     cacheInvalidatePrefix("sitemap:"),
     cacheInvalidatePrefix("admin:"),
   ]);
