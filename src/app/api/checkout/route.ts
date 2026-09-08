@@ -1,18 +1,23 @@
 import { HttpError, handleRoute, jsonOk, parseBody } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
+  IS_EMAIL_CHECKOUT,
+  MANUAL_PAYMENT_PROVIDER,
+} from "@/lib/checkout-mode";
+import {
   FREE_SHIPPING_THRESHOLD,
   STANDARD_SHIPPING_FEE,
   SITE,
 } from "@/lib/constants";
+import { sendOrderRequestEmails } from "@/lib/order-emails";
 import { buildPaymentData, PAYFAST_PROCESS_URL } from "@/lib/payfast";
 import { prisma } from "@/lib/prisma";
 import { generateOrderNumber, toNumber } from "@/lib/utils";
 import { checkoutSchema } from "@/lib/validators";
 
 /**
- * POST /api/checkout — turn a cart into a PENDING order and hand back the
- * field set to POST to PayFast.
+ * POST /api/checkout — turn a cart into a PENDING order and hand back whatever
+ * the customer needs in order to pay for it.
  *
  * Two rules drive the whole handler:
  *
@@ -23,6 +28,10 @@ import { checkoutSchema } from "@/lib/validators";
  *  2. Stock is decremented here, in the same transaction that writes the order.
  *     `/api/admin/orders/[id]` increments it back on CANCELLED/REFUNDED, so if
  *     this half were missing, cancelling an order would invent inventory.
+ *
+ * Everything above the last few lines is identical in both checkout modes, which
+ * is the point: an order is an order regardless of how it gets paid for. Only the
+ * final step differs, and it differs once — see `lib/checkout-mode.ts`.
  *
  * The order is left PENDING. Only a verified PayFast ITN promotes it to PAID —
  * see `/api/payfast/notify`.
@@ -157,7 +166,12 @@ export async function POST(request: Request) {
           },
           payment: {
             create: {
-              provider: "payfast",
+              // Which provider is owed the money. `manual` marks an order PayFast
+              // never saw, so the admin panel, the success page and the dev-only
+              // settlement helper can all tell the two kinds of PENDING apart.
+              provider: IS_EMAIL_CHECKOUT
+                ? MANUAL_PAYMENT_PROVIDER
+                : "payfast",
               status: "PENDING",
               amount: total,
             },
@@ -187,7 +201,32 @@ export async function POST(request: Request) {
       return created;
     });
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? SITE.url;
+    // ── Email completion ────────────────────────────────────────────────
+    // PayFast can't receive money until the merchant account is approved, so
+    // the order is finished here instead: the shop is emailed to arrange
+    // payment, the customer is emailed to say so, and the browser stays on the
+    // site. Nothing below this block runs in email mode, which is why the
+    // PayFast handoff needs no conditionals of its own.
+    //
+    // Awaited, not fired and forgotten: on a serverless host the function is
+    // frozen the moment the response is returned, and a pending promise dies
+    // with it. `sendOrderRequestEmails` resolves rather than throws, so a mail
+    // failure can't 500 an order that has already taken stock — it's logged,
+    // and the customer still lands on a page that tells them what happens next.
+    if (IS_EMAIL_CHECKOUT) {
+      await sendOrderRequestEmails(order.id);
+
+      return jsonOk({
+        mode: "email" as const,
+        orderNumber: order.orderNumber,
+        total,
+      });
+    }
+
+    // `SITE.url` rather than the raw environment variable: it is the same value
+    // with any trailing slash stripped, and PayFast's return, cancel and notify
+    // URLs are built by concatenation — `${siteUrl}/checkout/success`.
+    const siteUrl = SITE.url;
 
     const itemName =
       lines.length === 1

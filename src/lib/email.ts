@@ -14,6 +14,10 @@ import { SITE } from "@/lib/constants";
  * 2. **Missing configuration is a skip, not a crash.** A fresh clone with no
  *    `RESEND_API_KEY` should still be able to place a test order. The absence is
  *    logged loudly enough to notice, once, rather than on every send.
+ * 3. **A failure is either retried or explained.** Transport faults get another
+ *    attempt, because they usually succeed on the second one; misconfiguration
+ *    gets a log line that names the actual mistake, because a retry will never
+ *    fix it and a generic provider error sends you looking in the wrong place.
  */
 
 /** Where the branded colours come from — the OKLCH theme tokens, resolved to
@@ -48,7 +52,11 @@ export const EMAIL_FONT =
 
 export type SendEmailResult =
   | { ok: true; id: string | null }
-  | { ok: false; reason: "not-configured" | "no-recipient" | "failed"; detail?: string };
+  | {
+      ok: false;
+      reason: "not-configured" | "no-recipient" | "bad-from" | "failed";
+      detail?: string;
+    };
 
 let cachedClient: Resend | null = null;
 let warnedMissingKey = false;
@@ -95,6 +103,55 @@ function getFrom() {
 
   return `${SITE.name} <onboarding@resend.dev>`;
 }
+
+/**
+ * Why this From address can't be used, or null if it's fine.
+ *
+ * Worth checking before spending a network round trip, because Resend's own
+ * rejection names the field but not the mistake — a single missing `@` in
+ * `EMAIL_FROM` comes back as a 422 on every order, which reads in the log as
+ * "email is broken" rather than "one character is wrong". The two shapes it
+ * accepts are `you@domain.co.za` and `Your Name <you@domain.co.za>`.
+ */
+function fromAddressProblem(from: string) {
+  const angled = from.match(/<([^>]*)>\s*$/);
+  const address = (angled ? angled[1] : from).trim();
+
+  if (!address) return "there is no address inside the angle brackets";
+  if (!address.includes("@")) return `"${address}" has no "@" in it`;
+  if (!/^[^\s@<>]+@[^\s@<>.]+(\.[^\s@<>.]+)+$/.test(address)) {
+    return `"${address}" is not a valid email address`;
+  }
+
+  return null;
+}
+
+/**
+ * How many times one email is attempted, and how long to wait between tries.
+ *
+ * Three attempts over roughly 1.6 seconds. The ceiling matters because the
+ * checkout response waits on this: the customer is looking at a spinner, and a
+ * provider outage must not turn into a thirty-second page load. Two retries
+ * covers the failure this is for — a connection that drops or a rate limit hit
+ * by sending the customer's copy and the shop's copy in the same instant.
+ */
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = [400, 1200];
+
+/**
+ * Whether another attempt could plausibly succeed.
+ *
+ * `null` is the SDK's own signal that the request never completed — DNS, TLS, a
+ * dropped connection — which is precisely the case a second attempt fixes. A
+ * validation error, a bad key or an unverified domain will fail identically
+ * forever, so retrying those just delays the log line that explains them.
+ */
+function isTransient(statusCode: number | null) {
+  if (statusCode === null) return true;
+  return statusCode === 408 || statusCode === 429 || statusCode >= 500;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Admin recipients for order alerts.
@@ -169,33 +226,60 @@ export async function sendEmail({
   const client = getClient();
   if (!client) return { ok: false, reason: "not-configured" };
 
-  try {
-    const { data, error } = await client.emails.send({
-      from: getFrom(),
-      to: recipients,
-      subject,
-      html,
-      // A text part is not decoration: its absence is one of the strongest spam
-      // signals a transactional email can carry.
-      text,
-      replyTo: replyTo ?? SITE.email,
-    });
+  const from = getFrom();
+  const problem = fromAddressProblem(from);
 
-    if (error) {
-      console.error("[email] send rejected", { subject, error });
-      return { ok: false, reason: "failed", detail: error.message };
-    }
+  if (problem) {
+    console.error(
+      `[email] EMAIL_FROM is not a usable sender — ${problem}. Resend needs ` +
+        `"you@yourdomain.co.za" or "Your Name <you@yourdomain.co.za>", on a ` +
+        `domain verified in your Resend account. Nothing was sent.`,
+      { subject, from },
+    );
 
-    return { ok: true, id: data?.id ?? null };
-  } catch (error) {
-    // Network fault, DNS, timeout — anything the SDK didn't turn into `error`.
-    console.error("[email] send threw", { subject, error });
-    return {
-      ok: false,
-      reason: "failed",
-      detail: error instanceof Error ? error.message : String(error),
-    };
+    return { ok: false, reason: "bad-from", detail: problem };
   }
+
+  let detail = "no attempt was made";
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (attempt > 1) await sleep(RETRY_DELAY_MS[attempt - 2] ?? 1200);
+
+    try {
+      const { data, error } = await client.emails.send({
+        from,
+        to: recipients,
+        subject,
+        html,
+        // A text part is not decoration: its absence is one of the strongest spam
+        // signals a transactional email can carry.
+        text,
+        replyTo: replyTo ?? SITE.email,
+      });
+
+      if (!error) return { ok: true, id: data?.id ?? null };
+
+      detail = error.message;
+      const retry = isTransient(error.statusCode) && attempt < MAX_ATTEMPTS;
+
+      console.error("[email] send rejected", {
+        subject,
+        attempt,
+        retrying: retry,
+        error,
+      });
+
+      if (!retry) break;
+    } catch (error) {
+      // The SDK folds transport faults into `error` above, so getting here means
+      // something outside the request itself broke. Retried anyway — the attempt
+      // is bounded, and being wrong about the cause is cheaper than not trying.
+      detail = error instanceof Error ? error.message : String(error);
+      console.error("[email] send threw", { subject, attempt, error });
+    }
+  }
+
+  return { ok: false, reason: "failed", detail };
 }
 
 /**

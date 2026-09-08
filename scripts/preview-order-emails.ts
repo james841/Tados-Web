@@ -1,5 +1,5 @@
 /**
- * Render both order emails to disk without sending anything.
+ * Render every order email to disk without sending anything.
  *
  *   npm run email:preview
  *
@@ -7,9 +7,11 @@
  * layout, and read the .txt files to check the plain-text part (the one most
  * email templates get wrong, because nobody ever looks at it).
  *
- * Four files per email, because the branches are where these templates break:
- * a registered customer with delivery notes and paid shipping, and a guest
- * checkout with free shipping and no notes.
+ * Two fixtures, because the branches are where these templates break: a
+ * registered customer with delivery notes and paid shipping, and a guest checkout
+ * with free shipping and no notes. Each is rendered as both pairs — paid
+ * (`*-paid`) and awaiting payment (`*-request`) — so the claim each email makes
+ * about the money can be checked side by side.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -19,7 +21,12 @@ import {
   buildAdminEmail,
   buildCustomerEmail,
   type OrderForEmail,
+  type RenderedEmail,
 } from "../src/lib/order-email-templates";
+import {
+  buildAdminRequestEmail,
+  buildCustomerRequestEmail,
+} from "../src/lib/order-request-email-templates";
 
 const OUT_DIR = join(process.cwd(), ".email-preview");
 
@@ -125,24 +132,68 @@ const FIXTURES = [
   { slug: "guest", order: guest },
 ] as const;
 
+/**
+ * The same order rewound to the moment before payment.
+ *
+ * The request templates don't read the payment row, but the preview should still
+ * describe an order that could actually exist — PENDING, provider `manual`, no
+ * PayFast id — so a future field added to those templates renders honestly here.
+ */
+function awaitingPayment(order: OrderForEmail): OrderForEmail {
+  return {
+    ...order,
+    status: "PENDING",
+    payment: {
+      provider: "manual",
+      status: "PENDING",
+      pfPaymentId: null,
+      amount: order.total,
+    },
+  };
+}
+
+const PAIRS = [
+  {
+    suffix: "paid",
+    prepare: (order: OrderForEmail) => order,
+    templates: [
+      ["customer", buildCustomerEmail],
+      ["admin", buildAdminEmail],
+    ],
+  },
+  {
+    suffix: "request",
+    prepare: awaitingPayment,
+    templates: [
+      ["customer", buildCustomerRequestEmail],
+      ["admin", buildAdminRequestEmail],
+    ],
+  },
+] as const satisfies readonly {
+  suffix: string;
+  prepare: (order: OrderForEmail) => OrderForEmail;
+  templates: readonly (readonly [string, (o: OrderForEmail) => RenderedEmail])[];
+}[];
+
 mkdirSync(OUT_DIR, { recursive: true });
 
 for (const { slug, order } of FIXTURES) {
-  for (const [audience, build] of [
-    ["customer", buildCustomerEmail],
-    ["admin", buildAdminEmail],
-  ] as const) {
-    const rendered = build(order);
-    const base = `${audience}-${slug}`;
+  for (const { suffix, prepare, templates } of PAIRS) {
+    const prepared = prepare(order);
 
-    writeFileSync(join(OUT_DIR, `${base}.html`), rendered.html, "utf8");
-    writeFileSync(
-      join(OUT_DIR, `${base}.txt`),
-      `Subject: ${rendered.subject}\n\n${rendered.text}`,
-      "utf8",
-    );
+    for (const [audience, build] of templates) {
+      const rendered = build(prepared);
+      const base = `${audience}-${slug}-${suffix}`;
 
-    console.log(`${base.padEnd(22)} ${rendered.subject}`);
+      writeFileSync(join(OUT_DIR, `${base}.html`), rendered.html, "utf8");
+      writeFileSync(
+        join(OUT_DIR, `${base}.txt`),
+        `Subject: ${rendered.subject}\n\n${rendered.text}`,
+        "utf8",
+      );
+
+      console.log(`${base.padEnd(30)} ${rendered.subject}`);
+    }
   }
 }
 

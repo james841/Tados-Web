@@ -15,6 +15,12 @@ import { formatDateTime, formatPrice, toNumber } from "@/lib/utils";
  * an API key — `npm run email:preview` writes both to disk. An email template
  * you can't look at before it goes out is one that breaks silently, and the only
  * person who finds out is the customer.
+ *
+ * These two are the *paid* pair, sent once PayFast confirms settlement. The
+ * layout primitives below are exported because `order-request-email-templates.ts`
+ * builds the awaiting-payment pair out of the same parts — one set of item rows,
+ * one address block, one order headline, so the four emails can't drift into
+ * looking like they came from different shops.
  */
 
 /** Anything `toNumber` can read: a Prisma `Decimal`, a string, or a number. That
@@ -90,7 +96,7 @@ const {
 
 /** The uppercase micro-label used for every section heading, matching the
  * admin panel's own card headers so the email reads as part of the product. */
-const LABEL = `font-family:${EMAIL_FONT};font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${ink400};`;
+export const LABEL = `font-family:${EMAIL_FONT};font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${ink400};`;
 
 /** Best available name for the person who ordered — the address is the most
  * reliable source, since guest checkout has no user record at all. */
@@ -101,14 +107,14 @@ export function customerName(order: OrderForEmail) {
   return order.user?.name?.trim() || order.email;
 }
 
-function firstName(order: OrderForEmail) {
+export function firstName(order: OrderForEmail) {
   const full = customerName(order);
   // An email address standing in for a name should not be split on a space.
   if (full.includes("@")) return full;
   return full.split(/\s+/)[0] || full;
 }
 
-function renderItemRows(order: OrderForEmail) {
+export function renderItemRows(order: OrderForEmail) {
   return order.items
     .map(
       (item) => `
@@ -128,7 +134,21 @@ function renderItemRows(order: OrderForEmail) {
     .join("");
 }
 
-function renderTotalsRows(order: OrderForEmail) {
+/**
+ * Subtotal, delivery and the total.
+ *
+ * The last row is labelled by the caller. The same figure is "Total paid" on a
+ * receipt and "Total due" on an order still waiting for payment, and claiming
+ * the first when the second is true is the one mistake in these templates a
+ * customer would certainly notice.
+ */
+export function renderTotalsRows(
+  order: OrderForEmail,
+  {
+    totalLabel = "Total paid",
+    accent = brand600,
+  }: { totalLabel?: string; accent?: string } = {},
+) {
   const shipping = toNumber(order.shipping);
   const discount = toNumber(order.discount);
 
@@ -143,12 +163,12 @@ function renderTotalsRows(order: OrderForEmail) {
       ${line("Delivery", shipping === 0 ? "Free" : formatPrice(shipping))}
       ${discount > 0 ? line("Discount", `−${formatPrice(discount)}`) : ""}
       <tr>
-        <td style="padding:12px 0 0;border-top:2px solid ${brand600};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${ink900};">Total paid</td>
-        <td align="right" style="padding:12px 0 0;border-top:2px solid ${brand600};font-family:${EMAIL_FONT};font-size:18px;font-weight:700;color:${ink900};white-space:nowrap;">${formatPrice(toNumber(order.total))}</td>
+        <td style="padding:12px 0 0;border-top:2px solid ${accent};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${ink900};">${totalLabel}</td>
+        <td align="right" style="padding:12px 0 0;border-top:2px solid ${accent};font-family:${EMAIL_FONT};font-size:18px;font-weight:700;color:${ink900};white-space:nowrap;">${formatPrice(toNumber(order.total))}</td>
       </tr>`;
 }
 
-function renderAddressBlock(order: OrderForEmail) {
+export function renderAddressBlock(order: OrderForEmail) {
   if (!order.address) {
     return `<p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${ink500};">No delivery address was captured with this order.</p>`;
   }
@@ -169,7 +189,7 @@ function renderAddressBlock(order: OrderForEmail) {
     </p>`;
 }
 
-function renderButton(href: string, label: string, background: string) {
+export function renderButton(href: string, label: string, background: string) {
   // A table-wrapped anchor rather than a styled <button>: Outlook renders padding
   // on an inline anchor inconsistently, and a bare link reads as an afterthought
   // next to the rest of the layout.
@@ -182,7 +202,7 @@ function renderButton(href: string, label: string, background: string) {
 
 /** The order number and total, side by side against a coloured rule. This is the
  * block both emails get scanned for, so it carries the weight. */
-function renderOrderHeadline(order: OrderForEmail, accent: string) {
+export function renderOrderHeadline(order: OrderForEmail, accent: string) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
       <td style="border-left:3px solid ${accent};padding:2px 0 2px 14px;">
         <span style="${LABEL}display:block;">Order number</span>
@@ -196,7 +216,7 @@ function renderOrderHeadline(order: OrderForEmail, accent: string) {
     </tr></table>`;
 }
 
-function textItemLines(order: OrderForEmail) {
+export function textItemLines(order: OrderForEmail) {
   return order.items
     .map(
       (item) =>
@@ -207,7 +227,7 @@ function textItemLines(order: OrderForEmail) {
     .join("\n");
 }
 
-function textAddressLines(order: OrderForEmail) {
+export function textAddressLines(order: OrderForEmail) {
   if (!order.address) return "  No delivery address captured.";
 
   const a = order.address;

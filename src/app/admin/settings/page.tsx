@@ -1,4 +1,5 @@
 import {
+  CreditCard,
   ExternalLink,
   Mail,
   MapPin,
@@ -6,6 +7,7 @@ import {
   Phone,
 } from "lucide-react";
 
+import { IS_EMAIL_CHECKOUT } from "@/lib/checkout-mode";
 import {
   CITIES_SENTENCE,
   DELIVERY_PROMISE,
@@ -73,6 +75,18 @@ export default function AdminSettingsPage() {
         </div>
 
         <dl className="divide-y divide-ink-100 text-sm">
+          <Row
+            label="Checkout"
+            value={
+              IS_EMAIL_CHECKOUT ? "Completed by email" : "PayFast (card & EFT)"
+            }
+            icon={<CreditCard size={15} />}
+            note={
+              IS_EMAIL_CHECKOUT
+                ? `Orders arrive as an email to ${SITE.email} and payment is arranged by hand. Set NEXT_PUBLIC_CHECKOUT_MODE=payfast to switch card payments back on.`
+                : "Customers pay on PayFast's secure page; orders are marked paid by the ITN callback."
+            }
+          />
           <Row
             label="Standard shipping"
             value={`R${STANDARD_SHIPPING_FEE}`}

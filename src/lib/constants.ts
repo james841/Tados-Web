@@ -8,6 +8,34 @@
  * top-level category populated instead of leaving thin one-product buckets.
  */
 
+/**
+ * The live domain, as bought. Hard-coded as the production fallback rather than
+ * left to an environment variable alone, because the failure is silent: with
+ * `NEXT_PUBLIC_SITE_URL` unset in a deployment, every canonical tag, JSON-LD
+ * `@id` and sitemap entry claimed `http://localhost:3000` while the pages
+ * themselves looked perfect. A crawler can't reach that, and nothing in the UI
+ * shows it's wrong.
+ */
+const PRODUCTION_ORIGIN = "https://www.tadossmarttech.com";
+
+/**
+ * The canonical origin — absolute, and never with a trailing slash.
+ *
+ * Paths are concatenated onto this everywhere (`${SITE.url}/products`), so one
+ * stray slash in the environment variable becomes `https://site.co.za//products`
+ * across the whole site at once — which Google reads as a different URL from the
+ * one meant, on every page, including the sitemap it's told to trust.
+ */
+function siteOrigin() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  if (configured) return configured;
+
+  // Only a local dev server has any business calling itself localhost.
+  return process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : PRODUCTION_ORIGIN;
+}
+
 export const SITE = {
   name: "Tados Smart Technology",
   /** For tight spaces — the header lockup, breadcrumbs, order emails. */
@@ -18,16 +46,16 @@ export const SITE = {
   promise: "Smart Living Made Simple",
   description:
     "South African smart-home technology. Shop smart door locks, facial recognition locks, alarm systems, smart switches, ceiling speakers and curtain kits, with nationwide delivery and secure PayFast checkout.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url: siteOrigin(),
   locale: "en_ZA",
   /** The settlement currency. Display currency is per-visitor — see lib/currency.ts. */
   currency: "ZAR",
   twitter: "@tadossmart",
-  email: "support@tadossmart.co.za",
-  salesEmail: "sales@tadossmart.co.za",
-  returnsEmail: "returns@tadossmart.co.za",
-  privacyEmail: "privacy@tadossmart.co.za",
-  phone: "+27 11 000 0000",
+  email: "tadosexcelsolutions@gmail.com",
+  salesEmail: "tadosexcelsolutions@gmail.com",
+  returnsEmail: "tadosexcelsolutions@gmail.com",
+  privacyEmail: "tadosexcelsolutions@gmail.com",
+  phone: "+277 356 98203",
   /**
    * WhatsApp destination for installation requests, digits only with country
    * code — wa.me rejects spaces and a leading +.
@@ -35,7 +63,7 @@ export const SITE = {
    * Placeholder until the real number is supplied: set
    * NEXT_PUBLIC_WHATSAPP_NUMBER in .env and every surface picks it up.
    */
-  whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "27000000000",
+  whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "27735698203",
   operatingHours: "Mon–Sat, 08:00–17:00 SAST",
   /**
    * Where the business operates. Kept as a list because it appears in the

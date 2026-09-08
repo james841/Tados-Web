@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, Clock, Package } from "lucide-react";
+import { CheckCircle2, Clock, Mail, MessageCircle, Package } from "lucide-react";
 
 import { ClearCartOnMount } from "@/components/checkout/clear-cart-on-mount";
 import { InstallationOffer } from "@/components/checkout/installation-offer";
 import { ButtonLink, EmptyState } from "@/components/ui";
+import {
+  IS_EMAIL_CHECKOUT,
+  MANUAL_PAYMENT_PROVIDER,
+} from "@/lib/checkout-mode";
+import { SITE, whatsappLink } from "@/lib/constants";
 import { devConfirmOrder, devSettlementAllowed } from "@/lib/dev-settle";
 import { prisma } from "@/lib/prisma";
 import { formatDate, formatPrice, toNumber } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Order confirmed",
+  // "Confirmed" would be a claim, and in email mode it isn't true yet.
+  title: IS_EMAIL_CHECKOUT ? "Order placed" : "Order confirmed",
   robots: { index: false, follow: false },
 };
 
@@ -25,8 +31,15 @@ export const dynamic = "force-dynamic";
  * actually in, and says "processing" rather than "paid" when the callback
  * hasn't arrived yet.
  *
+ * There are three unpaid endings, not one, and they need different words:
+ * a PayFast payment still settling, an order cancelled outright, and an order
+ * whose payment is being arranged by email because PayFast can't take money yet
+ * (`lib/checkout-mode.ts`). The third is the *expected* ending right now, so it
+ * reads as progress rather than as something gone wrong.
+ *
  * On a dev machine PayFast cannot reach localhost, so `devConfirmOrder` settles
- * the order here instead. That helper is hard-gated to development + sandbox.
+ * the order here instead. That helper is hard-gated to development + sandbox, and
+ * declines email-mode orders outright.
  */
 export default async function CheckoutSuccessPage({
   searchParams,
@@ -66,7 +79,7 @@ export default async function CheckoutSuccessPage({
           postalCode: true,
         },
       },
-      payment: { select: { status: true } },
+      payment: { select: { status: true, provider: true } },
     },
   });
 
@@ -74,21 +87,46 @@ export default async function CheckoutSuccessPage({
 
   const paid = order.payment?.status === "COMPLETE";
   const cancelled = order.status === "CANCELLED";
+  /**
+   * Placed, unpaid, and waiting on the shop rather than on a gateway.
+   *
+   * Read from the order's own payment row, not from `CHECKOUT_MODE` — orders
+   * outlive environment variables, and once PayFast is switched on, every email
+   * order already in the system still has to describe itself correctly.
+   */
+  const awaitingArrangement =
+    !paid &&
+    !cancelled &&
+    order.payment?.provider === MANUAL_PAYMENT_PROVIDER;
+
+  const whatsapp = whatsappLink(
+    `Hi ${SITE.shortName}, I've just placed order ${order.orderNumber} and would like to arrange payment.`,
+  );
 
   return (
     <div className="container-page max-w-3xl py-12">
-      {/* Only wipe the cart once the money is actually in. */}
-      <ClearCartOnMount enabled={paid} />
+      {/* Wipe the cart once the order is real: either the money is in, or the
+          order is placed and its stock is already held against it. Leaving items
+          in the cart after an email order invites a duplicate. */}
+      <ClearCartOnMount enabled={paid || awaitingArrangement} />
 
       <div className="text-center">
         <span
           className={
             paid
               ? "inline-flex size-16 items-center justify-center rounded-full bg-brand-50 text-brand-600"
-              : "inline-flex size-16 items-center justify-center rounded-full bg-amber-50 text-amber-600"
+              : awaitingArrangement
+                ? "inline-flex size-16 items-center justify-center rounded-full bg-accent-50 text-accent-600"
+                : "inline-flex size-16 items-center justify-center rounded-full bg-amber-50 text-amber-600"
           }
         >
-          {paid ? <CheckCircle2 size={32} /> : <Clock size={32} />}
+          {paid ? (
+            <CheckCircle2 size={32} />
+          ) : awaitingArrangement ? (
+            <Mail size={32} />
+          ) : (
+            <Clock size={32} />
+          )}
         </span>
 
         <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-ink-900">
@@ -96,7 +134,9 @@ export default async function CheckoutSuccessPage({
             ? "Thank you — your order is confirmed"
             : cancelled
               ? "This order was cancelled"
-              : "We're confirming your payment"}
+              : awaitingArrangement
+                ? "Order placed — payment details are on the way"
+                : "We're confirming your payment"}
         </h1>
 
         <p className="mx-auto mt-3 max-w-xl text-sm text-ink-600">
@@ -111,6 +151,13 @@ export default async function CheckoutSuccessPage({
               The payment didn&apos;t go through and the items have been returned
               to stock. Nothing was charged.
             </>
+          ) : awaitingArrangement ? (
+            <>
+              Your items are set aside. We&apos;ll email{" "}
+              <strong className="text-ink-900">{order.email}</strong> with payment
+              options — usually within a couple of hours during{" "}
+              {SITE.operatingHours}. Nothing has been charged yet.
+            </>
           ) : (
             <>
               PayFast is still confirming this payment. This usually takes a few
@@ -123,6 +170,23 @@ export default async function CheckoutSuccessPage({
         <p className="mt-4 inline-block rounded-lg bg-ink-100 px-4 py-2 text-sm font-semibold text-ink-900">
           Order {order.orderNumber}
         </p>
+
+        {awaitingArrangement ? (
+          <div className="mt-6">
+            <ButtonLink
+              href={whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="primary"
+            >
+              <MessageCircle size={16} />
+              Sort it out now on WhatsApp
+            </ButtonLink>
+            <p className="mt-2 text-xs text-ink-500">
+              Fastest route — we&apos;ll take payment with you there and then.
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-10 rounded-card border border-ink-200 bg-white p-6">

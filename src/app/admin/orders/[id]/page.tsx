@@ -9,6 +9,7 @@ import { ArrowLeft, CreditCard, MapPin, Package, User } from "lucide-react";
 import { useAdminFeedback } from "@/components/admin/feedback";
 import { ORDER_STATUSES, OrderStatusPill } from "@/components/admin/status-pill";
 import { OrderTimeline } from "@/components/orders/order-timeline";
+import { MANUAL_PAYMENT_PROVIDER } from "@/lib/checkout-mode";
 import { cn, formatDateTime, formatPrice } from "@/lib/utils";
 
 /**
@@ -396,7 +397,11 @@ export default function AdminOrderDetailPage({
                     />
                     <Row
                       label="Provider"
-                      value={order.payment.provider}
+                      value={
+                        order.payment.provider === MANUAL_PAYMENT_PROVIDER
+                          ? "Email — arranged by hand"
+                          : order.payment.provider
+                      }
                     />
                     <Row
                       label="Amount"

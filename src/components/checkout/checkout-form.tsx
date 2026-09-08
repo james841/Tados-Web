@@ -1,13 +1,15 @@
 "use client";
 
-import { Loader2, Lock, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, Mail, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button, CurrencyAmount, CurrencyNotice, Price } from "@/components/ui";
+import { IS_EMAIL_CHECKOUT } from "@/lib/checkout-mode";
 import {
   FREE_SHIPPING_THRESHOLD,
+  SITE,
   STANDARD_SHIPPING_FEE,
 } from "@/lib/constants";
 import { cn, formatPrice, SA_PROVINCES } from "@/lib/utils";
@@ -16,10 +18,18 @@ import { selectCartSubtotal, useCart } from "@/store/cart";
 /**
  * Checkout form.
  *
- * Two steps — shipping details, then a review — followed by a handoff to
- * PayFast. The handoff is a real form POST rather than a redirect because
+ * Two steps — shipping details, then a review — followed by whichever ending the
+ * shop is currently running.
+ *
+ * With PayFast, the handoff is a real form POST rather than a redirect because
  * PayFast expects the signed fields as form data, and the signature covers
  * exactly the field set the server built.
+ *
+ * With email completion (`lib/checkout-mode.ts`), there is no handoff at all: the
+ * server places the order, emails the shop to arrange payment, and this component
+ * moves straight to the success page. Same two steps, same review, one fewer
+ * hop — the customer never leaves the site, so nothing about the flow needs
+ * explaining to them beyond what the last screen says.
  *
  * The totals shown here are indicative. The server recomputes them from
  * database prices in /api/checkout, and that figure is what gets signed and
@@ -183,7 +193,22 @@ export function CheckoutForm() {
           setStep("details");
         }
 
-        throw new Error(body.error ?? "We couldn't start your payment.");
+        throw new Error(
+          body.error ??
+            (IS_EMAIL_CHECKOUT
+              ? "We couldn't place your order."
+              : "We couldn't start your payment."),
+        );
+      }
+
+      // Email completion: the order already exists and the shop has been told.
+      // Straight to the success page, which explains what happens next and is
+      // also where the cart gets cleared.
+      if (body.mode === "email") {
+        router.push(
+          `/checkout/success?order=${encodeURIComponent(body.orderNumber)}`,
+        );
+        return;
       }
 
       // Cart is cleared on the success page, not here — if the customer
@@ -280,7 +305,11 @@ export function CheckoutForm() {
                 onChange={(v) => update("email", v)}
                 error={fieldErrors.email}
                 autoComplete="email"
-                hint="Your order confirmation goes here."
+                hint={
+                  IS_EMAIL_CHECKOUT
+                    ? "Your order and payment details go here."
+                    : "Your order confirmation goes here."
+                }
               />
               <Field
                 label="Phone"
@@ -395,7 +424,7 @@ export function CheckoutForm() {
           <section className="rounded-card border border-ink-200 bg-white p-6">
             <div className="flex items-start justify-between gap-4">
               <h2 className="text-lg font-bold text-ink-900">
-                Review &amp; pay
+                {IS_EMAIL_CHECKOUT ? "Review & confirm" : "Review & pay"}
               </h2>
               <button
                 type="button"
@@ -472,23 +501,43 @@ export function CheckoutForm() {
             >
               {submitting ? (
                 <Loader2 size={18} className="animate-spin" />
+              ) : IS_EMAIL_CHECKOUT ? (
+                <Mail size={16} />
               ) : (
                 <Lock size={16} />
               )}
               {/* Deliberately `formatPrice`, not the visitor's currency: this is
-                  the amount PayFast will actually charge, and PayFast settles in
-                  rand only. Everywhere else on the page may show a converted
+                  the amount that will actually be charged, and the shop settles
+                  in rand only. Everywhere else on the page may show a converted
                   guide price — the button must not. */}
-              Pay {formatPrice(total)} with PayFast
+              {IS_EMAIL_CHECKOUT
+                ? submitting
+                  ? "Placing your order…"
+                  : `Place order · ${formatPrice(total)}`
+                : `Pay ${formatPrice(total)} with PayFast`}
             </Button>
 
             <CurrencyNotice className="mt-3 text-center" />
 
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-500">
-              <ShieldCheck size={14} className="text-brand-600" />
-              You&apos;ll be redirected to PayFast&apos;s secure page. We never
-              see your card details.
-            </p>
+            {IS_EMAIL_CHECKOUT ? (
+              <p className="mt-3 flex items-start justify-center gap-1.5 text-xs text-ink-500">
+                <Mail size={14} className="mt-0.5 shrink-0 text-brand-600" />
+                <span>
+                  No card details needed. We&apos;ll email{" "}
+                  <span className="font-medium text-ink-700">
+                    {values.email}
+                  </span>{" "}
+                  with payment options — usually within a couple of hours during{" "}
+                  {SITE.operatingHours}.
+                </span>
+              </p>
+            ) : (
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-500">
+                <ShieldCheck size={14} className="text-brand-600" />
+                You&apos;ll be redirected to PayFast&apos;s secure page. We never
+                see your card details.
+              </p>
+            )}
           </section>
         )}
       </div>
@@ -550,7 +599,10 @@ export function CheckoutForm() {
 function StepIndicator({ step }: { step: Step }) {
   const steps: { key: Step; label: string }[] = [
     { key: "details", label: "Shipping" },
-    { key: "review", label: "Review & pay" },
+    {
+      key: "review",
+      label: IS_EMAIL_CHECKOUT ? "Review & confirm" : "Review & pay",
+    },
   ];
 
   return (

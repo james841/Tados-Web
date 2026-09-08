@@ -1,5 +1,6 @@
 import "server-only";
 
+import { MANUAL_PAYMENT_PROVIDER } from "@/lib/checkout-mode";
 import { sendOrderEmails } from "@/lib/order-emails";
 import { prisma } from "@/lib/prisma";
 import { IS_SANDBOX } from "@/lib/payfast";
@@ -35,7 +36,7 @@ export async function devConfirmOrder(orderNumber: string) {
       id: true,
       status: true,
       total: true,
-      payment: { select: { status: true } },
+      payment: { select: { status: true, provider: true } },
     },
   });
 
@@ -43,6 +44,11 @@ export async function devConfirmOrder(orderNumber: string) {
   // Never re-settle: mirrors the ITN's idempotency guard.
   if (order.payment?.status === "COMPLETE") return false;
   if (order.status !== "PENDING") return false;
+  // An order being paid for by email is not waiting on an ITN — it's waiting on
+  // a human. Settling it here would mark it paid and send the customer a receipt
+  // for money nobody has received, which is the one thing this helper's
+  // convenience isn't worth.
+  if (order.payment?.provider === MANUAL_PAYMENT_PROVIDER) return false;
 
   await prisma.$transaction([
     prisma.order.update({

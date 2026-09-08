@@ -88,9 +88,6 @@ export async function Footer() {
             </p>
 
             <div className="mt-6 flex gap-3">
-              <SocialLink href={whatsappLink()} label="WhatsApp">
-                <MessageCircle size={18} />
-              </SocialLink>
               <SocialLink href="https://www.facebook.com/share/1BxDDGTqnW/?mibextid=wwXIfr" label="Facebook">
                 <Facebook size={18} />
               </SocialLink>
