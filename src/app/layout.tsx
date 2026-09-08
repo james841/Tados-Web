@@ -8,6 +8,8 @@ import { SITE } from "@/lib/constants";
 import { resolveCurrency } from "@/lib/currency";
 import { CURRENCY_COOKIE } from "@/lib/currency-shared";
 import { getCategoryTree } from "@/lib/queries";
+import Script from "next/script";
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -130,10 +132,25 @@ function OrganisationSchema() {
   };
 
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-9JTZH07RV2"
+        strategy="afterInteractive"
+      />
+
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){window.dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-9JTZH07RV2');
+        `}
+      </Script>
+    </>
   );
 }
 
