@@ -514,6 +514,88 @@ export async function getAllProductSlugs() {
   );
 }
 
+export interface MerchantFeedProduct {
+  id: string;
+  name: string;
+  slug: string;
+  sku: string;
+  tagline: string | null;
+  description: string;
+  price: number;
+  compareAtPrice: number | null;
+  stock: number;
+  brandName: string | null;
+  categoryName: string;
+  categorySlug: string;
+  parentCategoryName: string | null;
+  parentCategorySlug: string | null;
+  /** Ordered gallery. The first is the one Google shows. */
+  images: string[];
+}
+
+/**
+ * Every product Google Merchant Center should see.
+ *
+ * Out-of-stock items are included rather than filtered — the feed carries an
+ * `availability` attribute for exactly this, and dropping an item makes
+ * Merchant Center treat it as withdrawn, which resets the review it has already
+ * passed. It comes back as a new item needing approval again when stock
+ * returns.
+ *
+ * Inactive products *are* excluded: `isActive: false` means the storefront
+ * won't serve the page, and a feed item whose landing page 404s is a
+ * disapproval.
+ */
+export async function getMerchantFeedProducts(): Promise<
+  MerchantFeedProduct[]
+> {
+  return cached(cacheKeys.merchantFeed, 3600, async () => {
+    const rows = await prisma.product.findMany({
+      where: { isActive: true },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        sku: true,
+        tagline: true,
+        description: true,
+        price: true,
+        compareAtPrice: true,
+        stock: true,
+        brand: { select: { name: true } },
+        category: {
+          select: {
+            name: true,
+            slug: true,
+            parent: { select: { name: true, slug: true } },
+          },
+        },
+        images: { select: { url: true }, orderBy: { position: "asc" } },
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      sku: row.sku,
+      tagline: row.tagline,
+      description: row.description,
+      price: toNumber(row.price),
+      compareAtPrice:
+        row.compareAtPrice === null ? null : toNumber(row.compareAtPrice),
+      stock: row.stock,
+      brandName: row.brand?.name ?? null,
+      categoryName: row.category.name,
+      categorySlug: row.category.slug,
+      parentCategoryName: row.category.parent?.name ?? null,
+      parentCategorySlug: row.category.parent?.slug ?? null,
+      images: row.images.map((image) => image.url),
+    }));
+  });
+}
+
 // ---------------------------------------------------------------
 // Search (header dropdown)
 // ---------------------------------------------------------------

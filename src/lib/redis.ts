@@ -205,6 +205,9 @@ export const cacheKeys = {
   searchLanding: "search:landing",
   adminStats: "admin:stats",
   sitemapProducts: "sitemap:products",
+  /** The Google Merchant Center product feed. Under `sitemap:` so the one
+   *  catalogue-write invalidation prefix already covers it. */
+  merchantFeed: "sitemap:merchant-feed",
 } as const;
 
 /** Call after any catalogue write so shoppers never see stale data. */

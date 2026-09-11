@@ -93,6 +93,26 @@ export const CITIES_SENTENCE = "Pretoria, Johannesburg and Durban";
 export const CITIES_DIVIDED = SITE.cities.join(" | ");
 
 /**
+ * An absolute URL for anything that leaves the site — structured data, the
+ * Merchant Center feed, order emails.
+ *
+ * Stored image URLs are a mix. Supabase Storage hands back a full
+ * `https://<ref>.supabase.co/storage/…` URL, while seeded and hand-entered
+ * records hold a site-relative `/images/…` path. Concatenating `SITE.url`
+ * unconditionally produced
+ * `https://www.tadossmarttech.comhttps://<ref>.supabase.co/…` in the Product
+ * JSON-LD of every product page — a URL nothing can fetch, and one no page
+ * reveals, because the UI renders the raw database value instead.
+ */
+export function absoluteUrl(path: string): string {
+  const value = path.trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  // Protocol-relative, as some CDNs still emit.
+  if (value.startsWith("//")) return `https:${value}`;
+  return `${SITE.url}${value.startsWith("/") ? "" : "/"}${value}`;
+}
+
+/**
  * A wa.me link with a pre-filled message.
  *
  * wa.me wants digits only — no `+`, no spaces — and the text URL-encoded. Both

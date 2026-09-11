@@ -6,7 +6,7 @@ import { ChevronRightIcon, ShieldCheckIcon, TruckIcon, RefreshCwIcon, ArrowRight
 import { ProductDetail } from "@/components/product/product-detail";
 import { ProductGrid } from "@/components/product/product-card";
 import { SectionHeading } from "@/components/ui";
-import { SITE } from "@/lib/constants";
+import { SITE, absoluteUrl } from "@/lib/constants";
 import {
   getAllProductSlugs,
   getProductBySlug,
@@ -77,7 +77,7 @@ function ProductSchema({
         name: product.name,
         description: product.tagline ?? product.description.slice(0, 300),
         sku: product.sku,
-        image: product.images.map((i) => `${SITE.url}${i.url}`),
+        image: product.images.map((i) => absoluteUrl(i.url)),
         brand: product.brand
           ? { "@type": "Brand", name: product.brand.name }
           : undefined,

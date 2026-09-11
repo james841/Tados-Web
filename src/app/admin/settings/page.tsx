@@ -1,10 +1,12 @@
 import {
   CreditCard,
   ExternalLink,
+  Globe,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
+  ShoppingBag,
 } from "lucide-react";
 
 import { IS_EMAIL_CHECKOUT } from "@/lib/checkout-mode";
@@ -106,6 +108,29 @@ export default function AdminSettingsPage() {
             label="Settlement currency"
             value="ZAR (South African Rand)"
             note="Visitors abroad see a converted guide price; every order is charged in rand"
+          />
+        </dl>
+      </section>
+
+      <section className="rounded-card border border-ink-200 bg-surface">
+        <div className="border-b border-ink-200 px-4 py-4 sm:px-6">
+          <h2 className="font-bold text-ink-900">Search &amp; shopping feeds</h2>
+        </div>
+
+        <dl className="divide-y divide-ink-100 text-sm">
+          <Row
+            label="Sitemap"
+            value={`${SITE.url}/sitemap.xml`}
+            icon={<Globe size={15} />}
+            mono
+            note="Submit this in Google Search Console"
+          />
+          <Row
+            label="Product feed"
+            value={`${SITE.url}/product-feed.xml`}
+            icon={<ShoppingBag size={15} />}
+            mono
+            note="Google Merchant Center fetches this daily. No username or password — leave the authentication fields blank. It rebuilds itself from the catalogue, so there is nothing to re-upload after a price or stock change."
           />
         </dl>
       </section>
