@@ -81,7 +81,7 @@ export default function AdminCustomersPage() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by name or email…"
           aria-label="Search customers"
-          className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
+          className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-base outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900 sm:text-sm"
         />
       </div>
 
@@ -92,7 +92,68 @@ export default function AdminCustomersPage() {
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-surface">
-        <div className="overflow-x-auto">
+        {/* Cards under `md`. Four columns is the narrowest table in the panel,
+            but "Lifetime spend" is the one people come here for and it was the
+            column furthest off the right edge. */}
+        <div className="divide-y divide-ink-100 md:hidden">
+          {customers === null ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="p-4">
+                <div className="h-12 animate-pulse rounded bg-ink-100" />
+              </div>
+            ))
+          ) : customers.length === 0 ? (
+            <p className="px-4 py-12 text-center text-sm text-ink-500">
+              No customers found.
+            </p>
+          ) : (
+            customers.map((customer) => (
+              <div key={customer.id} className="flex items-center gap-3 p-4">
+                <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink-100 text-sm font-bold uppercase text-ink-500">
+                  {customer.image ? (
+                    <Image
+                      src={customer.image}
+                      alt=""
+                      fill
+                      sizes="40px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    (customer.name ?? customer.email).charAt(0)
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 truncate text-sm font-medium text-ink-900">
+                    {customer.name ?? "—"}
+                    {customer.role === "ADMIN" ? (
+                      <span className="shrink-0 rounded-full bg-ink-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-50">
+                        Admin
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="truncate text-xs text-ink-500">
+                    {customer.email}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-500">
+                    {customer.orderCount} order
+                    {customer.orderCount === 1 ? "" : "s"} · joined{" "}
+                    {new Date(customer.createdAt).toLocaleDateString("en-ZA", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+
+                <p className="shrink-0 text-sm font-semibold tabular-nums text-ink-900">
+                  {formatPrice(customer.totalSpent)}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
               <tr>

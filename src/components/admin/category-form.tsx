@@ -338,8 +338,9 @@ export function CategoryFormDialog({
   );
 }
 
+/** 16px on a phone so iOS Safari doesn't zoom the dialog in on focus. */
 const inputClass =
-  "w-full rounded-lg border border-ink-200 px-3 py-2.5 text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900";
+  "w-full rounded-lg border border-ink-200 px-3 py-2.5 text-base text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900 sm:text-sm";
 
 function Field({
   label,

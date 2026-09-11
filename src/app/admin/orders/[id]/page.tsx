@@ -209,8 +209,8 @@ export default function AdminOrderDetailPage({
               </p>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <span className="font-medium text-ink-600">Status</span>
+            <label className="flex w-full items-center gap-2 text-sm sm:w-auto">
+              <span className="shrink-0 font-medium text-ink-600">Status</span>
               <select
                 value={order.status}
                 disabled={updating}
@@ -221,7 +221,9 @@ export default function AdminOrderDetailPage({
                   void changeStatus(select.value, select);
                 }}
                 aria-label={`Change status of ${order.orderNumber}`}
-                className="rounded-lg border border-ink-200 bg-surface px-3 py-2 text-sm text-ink-900 outline-none focus:border-ink-900 disabled:opacity-50"
+                // Full width on a phone — this is the one control on the page,
+                // and 16px keeps iOS Safari from zooming in on focus.
+                className="min-w-0 flex-1 rounded-lg border border-ink-200 bg-surface px-3 py-2.5 text-base text-ink-900 outline-none focus:border-ink-900 disabled:opacity-50 sm:flex-none sm:py-2 sm:text-sm"
               >
                 {ORDER_STATUSES.map((value) => (
                   <option key={value} value={value}>
@@ -241,7 +243,7 @@ export default function AdminOrderDetailPage({
               >
                 <ul className="divide-y divide-ink-100">
                   {order.items.map((item) => (
-                    <li key={item.id} className="flex gap-4 p-4">
+                    <li key={item.id} className="flex gap-3 p-4 sm:gap-4">
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-ink-50">
                         {item.image ? (
                           <Image
@@ -258,9 +260,13 @@ export default function AdminOrderDetailPage({
                         )}
                       </div>
 
-                      <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-2">
+                      {/* Line total stays on the same row as the name at every
+                          width. Wrapping it put it under the SKU on a phone,
+                          where it read as another attribute of the product
+                          rather than the amount being charged for it. */}
+                      <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-medium text-ink-900">
+                          <p className="text-sm font-medium text-ink-900 sm:text-base">
                             {item.name}
                           </p>
                           <p className="mt-0.5 text-xs text-ink-500">
@@ -271,7 +277,7 @@ export default function AdminOrderDetailPage({
                           </p>
                         </div>
 
-                        <p className="font-semibold tabular-nums text-ink-900">
+                        <p className="shrink-0 text-sm font-semibold tabular-nums text-ink-900 sm:text-base">
                           {formatPrice(item.price * item.quantity)}
                         </p>
                       </div>
@@ -441,11 +447,11 @@ function Card({
 }) {
   return (
     <section className="overflow-hidden rounded-card border border-ink-200 bg-surface">
-      <h2 className="flex items-center gap-2 border-b border-ink-100 px-5 py-3 text-sm font-bold uppercase tracking-wide text-ink-500">
+      <h2 className="flex items-center gap-2 border-b border-ink-100 px-4 py-3 text-sm font-bold uppercase tracking-wide text-ink-500 sm:px-5">
         {icon}
         {title}
       </h2>
-      <div className={bodyClassName ?? "p-5"}>{children}</div>
+      <div className={bodyClassName ?? "p-4 sm:p-5"}>{children}</div>
     </section>
   );
 }

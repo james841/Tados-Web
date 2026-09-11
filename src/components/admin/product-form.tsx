@@ -435,8 +435,15 @@ export function ProductFormDialog({
   );
 }
 
+/**
+ * Every input in the dialog.
+ *
+ * 16px on a phone, 14px from `sm`. Under 16px, iOS Safari zooms the whole page
+ * in when an input takes focus and never zooms back out — so tapping Name in
+ * this form left the admin panning a magnified dialog to reach Save.
+ */
 const inputClass =
-  "w-full rounded-lg border border-ink-200 px-3 py-2.5 text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900";
+  "w-full rounded-lg border border-ink-200 px-3 py-2.5 text-base text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900 sm:text-sm";
 
 function Field({
   label,
@@ -483,7 +490,7 @@ function Toggle({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-700">
+    <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-700">
       <input
         type="checkbox"
         checked={checked}

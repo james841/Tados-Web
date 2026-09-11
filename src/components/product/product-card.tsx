@@ -63,7 +63,12 @@ export function ProductCard({
         href={`/products/${product.slug}`}
         tabIndex={tabIndex}
         onFocus={onFocus}
-        className="relative aspect-[4/3] sm:aspect-square overflow-hidden bg-ink-50/50"
+        /* Square on a phone too, rather than the 4:3 it used to be. Two cards to
+           a row leaves each one about 170px wide, and a 4:3 window cropped the
+           top and bottom off products that are mostly tall — locks, padlocks,
+           alarm panels. Squaring it adds roughly 40px of card height and shows
+           the whole device. */
+        className="relative aspect-square overflow-hidden bg-ink-50/50"
       >
         {product.image ? (
           <Image

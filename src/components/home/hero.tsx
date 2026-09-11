@@ -10,8 +10,13 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
+import {
+  motion,
+  AnimatePresence,
+  useReducedMotion,
+  type PanInfo,
+} from "framer-motion";
 
 import { Logo } from "@/components/layout/logo";
 import { ButtonLink } from "@/components/ui";
@@ -24,6 +29,14 @@ const SLIDE_SECONDS = SLIDE_DURATION / 1000;
 const FADE_SECONDS = 0.85;
 /** Horizontal travel (px) that counts as a swipe rather than a tap. */
 const SWIPE_THRESHOLD = 45;
+/**
+ * Speed (px/sec) that advances the slide regardless of how far the finger got.
+ *
+ * Distance alone isn't enough: a quick flick on a phone often travels barely
+ * 20px, and a carousel that snaps back from a deliberate flick feels broken
+ * rather than firm.
+ */
+const SWIPE_VELOCITY = 400;
 
 /**
  * `tone` describes the photograph, not the styling, and the scrim reacts to it.
@@ -103,8 +116,18 @@ const HERO_SLIDES: {
 export function Hero() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  /**
+   * Whether to hand the slider over to a finger.
+   *
+   * Drag is enabled for touch pointers only. On a phone it's how everybody
+   * expects a carousel to work; with a mouse it isn't, and framer-motion has to
+   * capture pointerdown to track a gesture — which would stop anyone selecting
+   * the headline or dragging to highlight a price. The buttons below are the
+   * pointer affordance, so the mouse loses nothing.
+   */
+  const [touchDevice, setTouchDevice] = useState(false);
   const reduceMotion = useReducedMotion();
-  const touchStartX = useRef<number | null>(null);
 
   const goTo = useCallback((index: number) => {
     setCurrentSlide(
@@ -120,14 +143,42 @@ export function Hero() {
   );
 
   useEffect(() => {
-    if (paused) return;
+    const query = window.matchMedia("(pointer: coarse)");
+    const sync = () => setTouchDevice(query.matches);
+
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  // Autoplay is held while a finger is down as well as while paused: advancing
+  // out from under someone mid-gesture is the one thing worse than not
+  // advancing at all. Letting go restarts the full interval rather than
+  // resuming a part-spent one, so the slide you landed on gets its whole turn.
+  const held = paused || dragging;
+
+  useEffect(() => {
+    if (held) return;
 
     const timer = setTimeout(() => {
       setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
     }, SLIDE_DURATION);
 
     return () => clearTimeout(timer);
-  }, [currentSlide, paused]);
+  }, [currentSlide, held]);
+
+  function handleDragEnd(_: unknown, info: PanInfo) {
+    setDragging(false);
+
+    const travelled = info.offset.x;
+    const flicked = info.velocity.x;
+
+    if (travelled <= -SWIPE_THRESHOLD || flicked <= -SWIPE_VELOCITY) {
+      step(1);
+    } else if (travelled >= SWIPE_THRESHOLD || flicked >= SWIPE_VELOCITY) {
+      step(-1);
+    }
+  }
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -157,250 +208,279 @@ export function Hero() {
           step(-1);
         }
       }}
-      onTouchStart={(event) => {
-        touchStartX.current = event.touches[0]?.clientX ?? null;
-      }}
-      onTouchEnd={(event) => {
-        const start = touchStartX.current;
-        touchStartX.current = null;
-        if (start === null) return;
-
-        const delta = (event.changedTouches[0]?.clientX ?? start) - start;
-        if (Math.abs(delta) < SWIPE_THRESHOLD) return;
-        step(delta < 0 ? 1 : -1);
-      }}
     >
-      {/* Background image layers */}
-      <div className="absolute inset-0">
-        {HERO_SLIDES.map((item, index) => {
-          const isActive = index === currentSlide;
+      {/* Everything the eye sees sits on one draggable layer — photo, scrim,
+          copy and controls together — so a swipe moves the whole slide as a
+          single object instead of sliding the picture out from under its own
+          headline.
 
-          return (
-            <motion.div
-              key={item.image}
-              aria-hidden={!isActive}
-              className="absolute inset-0"
-              initial={false}
-              animate={{ opacity: isActive ? 1 : 0 }}
-              transition={{ duration: FADE_SECONDS, ease: [0.4, 0, 0.2, 1] }}
-              style={{ willChange: "opacity" }}
-            >
+          Constraints of zero in both directions turn the drag into a
+          rubber-band: the layer follows the finger, then springs back while the
+          crossfade takes over. It is deliberately not a sliding track. The
+          slides transition by fading, and a track would have to abandon that
+          for every visitor in order to serve the gesture.
+
+          `dragDirectionLock` is the part that keeps the page usable —
+          framer-motion commits to whichever axis the gesture opens on, so
+          scrolling down the homepage past the hero behaves exactly as it did
+          and never gets swallowed by the carousel. */}
+      <motion.div
+        className="absolute inset-0"
+        drag={touchDevice ? "x" : false}
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.18}
+        dragMomentum={false}
+        onDragStart={() => setDragging(true)}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Background image layers */}
+        <div className="absolute inset-0">
+          {HERO_SLIDES.map((item, index) => {
+            const isActive = index === currentSlide;
+
+            return (
               <motion.div
+                key={item.image}
+                aria-hidden={!isActive}
                 className="absolute inset-0"
                 initial={false}
-                animate={{ scale: reduceMotion ? 1 : isActive ? 1 : 1.06 }}
-                transition={{
-                  duration: isActive ? SLIDE_SECONDS + FADE_SECONDS : 0.5,
-                  ease: "easeOut",
-                }}
+                animate={{ opacity: isActive ? 1 : 0 }}
+                transition={{ duration: FADE_SECONDS, ease: [0.4, 0, 0.2, 1] }}
+                style={{ willChange: "opacity" }}
               >
-                <Image
-                  fill
-                  src={item.image}
-                  alt={item.alt}
-                  sizes="100vw"
-                  quality={80}
-                  priority={index === 0}
-                  loading="eager"
-                  style={{ objectPosition: item.objectPosition }}
-                  className={
-                    item.tone === "studio"
-                      ? "object-cover saturate-[1.02]"
-                      : "object-cover opacity-60 saturate-[1.05]"
-                  }
-                />
-              </motion.div>
-            </motion.div>
-          );
-        })}
-
-        {/* Scrim, in three layers rather than one flat veil.
-
-            A single dark wash reads fine over a dim lifestyle photo and murders
-            a white studio shot — and on a wide screen `object-cover` only crops
-            vertically, so the products genuinely do sit under the copy and
-            can't be nudged aside. The fix is directional darkness: heavy on the
-            left where the type lives, clearing by the middle so the hardware on
-            the right stays bright.
-
-            1. base veil — carries mobile, where the copy spans full width and
-               there is no empty side to fade towards
-            2. left-to-right — the readability panel behind the type
-            3. bottom-up — grounds the buttons and the indicator rail */}
-        <div className="absolute inset-0 bg-ink-950/45 lg:bg-ink-950/15" />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink-950/95 from-0% via-ink-950/60 via-45% to-transparent to-80%" />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-950/80 from-0% via-transparent via-40% to-transparent" />
-      </div>
-
-      {/* Brand Watermark */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-4 right-6 z-10 hidden lg:block"
-      >
-        <Logo variant="light" className="h-28 opacity-[0.05]" />
-      </div>
-
-      <div className="container-page relative z-20 flex h-full items-center">
-        <div className="max-w-2xl py-20 sm:py-28 lg:py-32">
-          {/* Social Proof Badge */}
-          <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-md transition-colors hover:border-white/20">
-            <div className="flex" aria-hidden="true">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star
-                  key={i}
-                  size={13}
-                  className="fill-amber-400 text-amber-400"
-                />
-              ))}
-            </div>
-            <div className="h-3.5 w-px bg-white/20" />
-            <span className="text-xs font-semibold tracking-wide text-white/90">
-              438 reviews on <span className="text-emerald-400">Trustpilot</span>
-            </span>
-          </div>
-
-          {/* Animated Copy */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            >
-              {slide.showLogo ? (
-                <div className="mt-7">
-                  <Logo
-                    variant="light"
-                    showTagline
-                    className="h-14 sm:h-[68px]"
-                  />
-                  <span className="sr-only">{SITE.name}</span>
-                </div>
-              ) : null}
-
-              <motion.h1
-                className={
-                  slide.showLogo
-                    ? "mt-5 text-3xl font-black leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
-                    : "mt-6 text-4xl font-black leading-[1.08] tracking-tight text-white sm:text-6xl lg:text-7xl"
-                }
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.04 }}
-              >
-                {slide.title}
-                <br />
-                <span className="text-brand-400">{slide.titleAccent}</span>
-              </motion.h1>
-
-              <motion.p
-                className="mt-6 max-w-lg text-base font-medium leading-relaxed text-ink-100 sm:text-lg"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.1 }}
-              >
-                {slide.description}
-              </motion.p>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Action Buttons */}
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <ButtonLink
-              href="/products"
-              variant="primary"
-              size="lg"
-              className="group transition-transform duration-300 hover:scale-[1.02]"
-            >
-              Explore Products
-              <ArrowRight
-                size={18}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-              />
-            </ButtonLink>
-            <ButtonLink
-              href="/category/smart-locks"
-              size="lg"
-              className="border border-white/15 bg-white/5 text-white backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:border-white/30 hover:bg-white/10"
-            >
-              Shop Smart Locks
-            </ButtonLink>
-          </div>
-
-          {/* Slide index.
-              Named rather than numbered. Four anonymous bars tell you how many
-              slides there are, which nobody wants to know; the category names
-              tell you what's coming and let you jump straight to the one you
-              came for. Slide order carries no meaning, so there's nothing to
-              number. Labels are desktop-only — on a phone they'd wrap past the
-              buttons above them, so the bars go back to plain pagination and
-              swipe does the work. */}
-          <div className="mt-12 flex items-end gap-4 sm:gap-6">
-            {HERO_SLIDES.map((item, index) => {
-              const isActive = index === currentSlide;
-
-              return (
-                <button
-                  key={item.image}
-                  type="button"
-                  onClick={() => goTo(index)}
-                  aria-label={`Show ${item.label}`}
-                  aria-current={isActive}
-                  className="group flex flex-col gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-4 focus-visible:ring-offset-ink-950"
+                <motion.div
+                  className="absolute inset-0"
+                  initial={false}
+                  animate={{ scale: reduceMotion ? 1 : isActive ? 1 : 1.06 }}
+                  transition={{
+                    duration: isActive ? SLIDE_SECONDS + FADE_SECONDS : 0.5,
+                    ease: "easeOut",
+                  }}
                 >
-                  <span
+                  <Image
+                    fill
+                    src={item.image}
+                    alt={item.alt}
+                    sizes="100vw"
+                    quality={80}
+                    priority={index === 0}
+                    loading="eager"
+                    style={{ objectPosition: item.objectPosition }}
                     className={
-                      isActive
-                        ? "hidden text-[11px] font-bold uppercase tracking-widest text-white transition-colors sm:block"
-                        : "hidden text-[11px] font-bold uppercase tracking-widest text-white/45 transition-colors group-hover:text-white/80 sm:block"
+                      item.tone === "studio"
+                        ? "object-cover saturate-[1.02]"
+                        : "object-cover opacity-60 saturate-[1.05]"
                     }
-                  >
-                    {item.label}
-                  </span>
+                  />
+                </motion.div>
+              </motion.div>
+            );
+          })}
 
-                  {/* Narrow/wide on mobile where there's no label to measure
-                      against; the full width of its own label on desktop, so
-                      the bar reads as that category's progress. */}
-                  <span
-                    className={
-                      isActive
-                        ? "relative h-1.5 w-12 overflow-hidden rounded-full bg-white/20 transition-all duration-300 sm:w-full"
-                        : "relative h-1.5 w-5 overflow-hidden rounded-full bg-white/20 transition-all duration-300 group-hover:bg-white/40 sm:w-full"
-                    }
-                  >
-                    {isActive ? (
-                      paused ? (
-                        <span className="absolute inset-0 bg-white" />
-                      ) : (
-                        <motion.span
-                          key={`fill-${currentSlide}`}
-                          className="absolute inset-y-0 left-0 bg-white"
-                          initial={{ width: "0%" }}
-                          animate={{ width: "100%" }}
-                          transition={{
-                            duration: SLIDE_SECONDS,
-                            ease: "linear",
-                          }}
-                        />
-                      )
-                    ) : null}
-                  </span>
-                </button>
-              );
-            })}
+          {/* Scrim, in three layers rather than one flat veil.
 
-            <button
-              type="button"
-              onClick={() => setPaused((value) => !value)}
-              aria-label={paused ? "Resume slideshow" : "Pause slideshow"}
-              className="mb-px ml-1 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white outline-none backdrop-blur-md transition-colors hover:border-white/30 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950"
-            >
-              {paused ? <Play size={11} /> : <Pause size={11} />}
-            </button>
+              A single dark wash reads fine over a dim lifestyle photo and
+              murders a white studio shot — and on a wide screen `object-cover`
+              only crops vertically, so the products genuinely do sit under the
+              copy and can't be nudged aside. The fix is directional darkness:
+              heavy on the left where the type lives, clearing by the middle so
+              the hardware on the right stays bright.
+
+              1. base veil — carries mobile, where the copy spans full width and
+                 there is no empty side to fade towards
+              2. left-to-right — the readability panel behind the type
+              3. bottom-up — grounds the buttons and the indicator rail */}
+          <div className="absolute inset-0 bg-ink-950/45 lg:bg-ink-950/15" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink-950/95 from-0% via-ink-950/60 via-45% to-transparent to-80%" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-950/80 from-0% via-transparent via-40% to-transparent" />
+        </div>
+
+        {/* Brand Watermark */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-4 right-6 z-10 hidden lg:block"
+        >
+          <Logo variant="light" className="h-28 opacity-[0.05]" />
+        </div>
+
+        <div className="container-page relative z-20 flex h-full items-center">
+          <div className="max-w-2xl py-20 sm:py-28 lg:py-32">
+            {/* Social Proof Badge */}
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-md transition-colors hover:border-white/20">
+              <div className="flex" aria-hidden="true">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star
+                    key={i}
+                    size={13}
+                    className="fill-amber-400 text-amber-400"
+                  />
+                ))}
+              </div>
+              <div className="h-3.5 w-px bg-white/20" />
+              <span className="text-xs font-semibold tracking-wide text-white/90">
+                438 reviews on{" "}
+                <span className="text-emerald-400">Trustpilot</span>
+              </span>
+            </div>
+
+            {/* Animated Copy */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {slide.showLogo ? (
+                  <div className="mt-7">
+                    <Logo
+                      variant="light"
+                      showTagline
+                      className="h-14 sm:h-[68px]"
+                    />
+                    <span className="sr-only">{SITE.name}</span>
+                  </div>
+                ) : null}
+
+                <motion.h1
+                  className={
+                    slide.showLogo
+                      ? "mt-5 text-3xl font-black leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
+                      : "mt-6 text-4xl font-black leading-[1.08] tracking-tight text-white sm:text-6xl lg:text-7xl"
+                  }
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, delay: 0.04 }}
+                >
+                  {slide.title}
+                  <br />
+                  <span className="text-brand-400">{slide.titleAccent}</span>
+                </motion.h1>
+
+                <motion.p
+                  className="mt-6 max-w-lg text-base font-medium leading-relaxed text-ink-100 sm:text-lg"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, delay: 0.1 }}
+                >
+                  {slide.description}
+                </motion.p>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Action Buttons */}
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <ButtonLink
+                href="/products"
+                variant="primary"
+                size="lg"
+                className="group transition-transform duration-300 hover:scale-[1.02]"
+              >
+                Explore Products
+                <ArrowRight
+                  size={18}
+                  className="transition-transform duration-300 group-hover:translate-x-1"
+                />
+              </ButtonLink>
+              <ButtonLink
+                href="/category/smart-locks"
+                size="lg"
+                className="border border-white/15 bg-white/5 text-white backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:border-white/30 hover:bg-white/10"
+              >
+                Shop Smart Locks
+              </ButtonLink>
+            </div>
+
+            {/* Slide index — and the second way to drive the carousel.
+
+                Swiping is the one people reach for on a phone, but it is
+                invisible: nothing on screen says it exists. These bars are the
+                visible half of the pair, and they work on every input — tap,
+                click or keyboard — so the slider is never dependent on a
+                gesture being guessed.
+
+                Named rather than numbered. Four anonymous bars tell you how
+                many slides there are, which nobody wants to know; the category
+                names tell you what's coming and let you jump straight to the
+                one you came for. Slide order carries no meaning, so there's
+                nothing to number. Labels are desktop-only — on a phone they'd
+                wrap past the buttons above them. */}
+            <div className="mt-12 flex items-end gap-4 sm:gap-6">
+              {HERO_SLIDES.map((item, index) => {
+                const isActive = index === currentSlide;
+
+                return (
+                  <button
+                    key={item.image}
+                    type="button"
+                    onClick={() => goTo(index)}
+                    aria-label={`Show ${item.label}`}
+                    aria-current={isActive}
+                    /* The padding/negative-margin pair grows the touch target
+                       to roughly 26px tall on a phone without moving anything:
+                       the bar itself is 6px, which is a target only a mouse can
+                       hit. Desktop has the label to aim at, so it drops back to
+                       no padding. */
+                    className="group -my-2.5 flex flex-col gap-2 rounded-sm py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-4 focus-visible:ring-offset-ink-950 sm:my-0 sm:py-0"
+                  >
+                    <span
+                      className={
+                        isActive
+                          ? "hidden text-[11px] font-bold uppercase tracking-widest text-white transition-colors sm:block"
+                          : "hidden text-[11px] font-bold uppercase tracking-widest text-white/45 transition-colors group-hover:text-white/80 sm:block"
+                      }
+                    >
+                      {item.label}
+                    </span>
+
+                    {/* Narrow/wide on mobile where there's no label to measure
+                        against; the full width of its own label on desktop, so
+                        the bar reads as that category's progress. */}
+                    <span
+                      className={
+                        isActive
+                          ? "relative h-1.5 w-12 overflow-hidden rounded-full bg-white/20 transition-all duration-300 sm:w-full"
+                          : "relative h-1.5 w-8 overflow-hidden rounded-full bg-white/20 transition-all duration-300 group-hover:bg-white/40 sm:w-full"
+                      }
+                    >
+                      {isActive ? (
+                        // Solid while held, so a paused or part-dragged slider
+                        // doesn't show a bar creeping towards an advance that
+                        // isn't coming.
+                        held ? (
+                          <span className="absolute inset-0 bg-white" />
+                        ) : (
+                          <motion.span
+                            key={`fill-${currentSlide}`}
+                            className="absolute inset-y-0 left-0 bg-white"
+                            initial={{ width: "0%" }}
+                            animate={{ width: "100%" }}
+                            transition={{
+                              duration: SLIDE_SECONDS,
+                              ease: "linear",
+                            }}
+                          />
+                        )
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setPaused((value) => !value)}
+                aria-label={paused ? "Resume slideshow" : "Pause slideshow"}
+                className="mb-px ml-1 flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white outline-none backdrop-blur-md transition-colors hover:border-white/30 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950 sm:size-7"
+              >
+                {paused ? <Play size={12} /> : <Pause size={12} />}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

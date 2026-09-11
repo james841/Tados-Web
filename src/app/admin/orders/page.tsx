@@ -142,17 +142,19 @@ export default function AdminOrdersPage() {
       </header>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1">
+        <div className="relative w-full sm:min-w-[220px] sm:flex-1">
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400"
           />
+          {/* 16px on a phone: below that, focusing an input makes iOS Safari
+              zoom the page in and leave it there. */}
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search order number or email…"
             aria-label="Search orders"
-            className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
+            className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-base outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900 sm:text-sm"
           />
         </div>
 
@@ -163,7 +165,7 @@ export default function AdminOrdersPage() {
             setPage(1);
           }}
           aria-label="Filter by status"
-          className="rounded-lg border border-ink-200 bg-surface px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-ink-900"
+          className="w-full rounded-lg border border-ink-200 bg-surface px-3 py-2.5 text-base text-ink-900 outline-none focus:border-ink-900 sm:w-auto sm:text-sm"
         >
           <option value="">All statuses</option>
           {ORDER_STATUSES.map((value) => (
@@ -181,7 +183,94 @@ export default function AdminOrdersPage() {
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-surface">
-        <div className="overflow-x-auto">
+        {/* Under `md`, cards instead of a seven-column scroll. The status
+            dropdown is the reason this matters most: on the table it was the
+            second-to-last column, so changing an order's status on a phone
+            meant scrolling a row sideways past five other columns first. */}
+        <div className="divide-y divide-ink-100 md:hidden">
+          {orders === null ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="p-4">
+                <div className="h-16 animate-pulse rounded bg-ink-100" />
+              </div>
+            ))
+          ) : orders.length === 0 ? (
+            <p className="px-4 py-12 text-center text-sm text-ink-500">
+              No orders match those filters.
+            </p>
+          ) : (
+            orders.map((order) => (
+              <div
+                key={order.id}
+                className={cn("p-4", order.isNew && "bg-accent-500/10")}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="text-sm font-semibold text-ink-900 hover:text-brand-700"
+                      >
+                        {order.orderNumber}
+                      </Link>
+
+                      {order.isNew ? (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-accent-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white animate-alert-ring motion-reduce:animate-none">
+                          New
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-0.5 truncate text-xs text-ink-500">
+                      {order.user?.name ?? order.email}
+                    </p>
+                  </div>
+
+                  <p className="shrink-0 text-sm font-semibold tabular-nums text-ink-900">
+                    {formatPrice(order.total)}
+                  </p>
+                </div>
+
+                <p className="mt-1 text-xs text-ink-500">
+                  {new Date(order.createdAt).toLocaleDateString("en-ZA", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}{" "}
+                  · {order.itemCount} item{order.itemCount === 1 ? "" : "s"}
+                </p>
+
+                <div className="mt-3 flex items-center gap-2">
+                  <select
+                    value={order.status}
+                    disabled={updatingId === order.id}
+                    onChange={(event) => {
+                      const select = event.currentTarget;
+                      void changeStatus(order, select.value, select);
+                    }}
+                    aria-label={`Change status of ${order.orderNumber}`}
+                    className="min-w-0 flex-1 rounded-lg border border-ink-200 bg-surface px-2 py-2 text-sm text-ink-700 outline-none focus:border-ink-900 disabled:opacity-50"
+                  >
+                    {ORDER_STATUSES.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Link
+                    href={`/admin/orders/${order.id}`}
+                    className="shrink-0 rounded-lg border border-ink-200 px-3 py-2 text-xs font-semibold text-brand-700 transition-colors hover:border-ink-900"
+                  >
+                    View
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
               <tr>

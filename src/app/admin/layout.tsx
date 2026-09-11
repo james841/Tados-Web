@@ -39,13 +39,18 @@ export default async function AdminLayout({
   );
 
   return (
+    // `flex-col` below `lg` is load-bearing, not cosmetic. As a row, the nav's
+    // full-width mobile bar took the whole viewport and `<main className="flex-1
+    // min-w-0">` was left with nothing to occupy — the admin content collapsed
+    // to zero width off the right edge of every phone screen. Stacking the two
+    // gives the page its width back; from `lg` they sit side by side as before.
     <AdminThemeProvider
       initialTheme={theme}
-      className="flex min-h-screen bg-ink-50"
+      className="flex min-h-screen flex-col bg-ink-50 lg:flex-row"
     >
       <IdleTimeout />
       <AdminSidebar user={{ name: user.name, email: user.email }} />
-      <main className="min-w-0 flex-1 px-5 py-6 lg:px-8 lg:py-8">
+      <main className="min-w-0 flex-1 px-4 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
         {/* Inside the theme wrapper, not portalled to `document.body`: the
             `.dark` class is scoped to that wrapper, so a portalled ledger would
             paint in light mode over a dark panel. Its own elements are `fixed`,

@@ -1,15 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
+import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Providers } from "@/components/providers";
-import { SITE } from "@/lib/constants";
+import { GA_MEASUREMENT_ID, SITE } from "@/lib/constants";
 import { resolveCurrency } from "@/lib/currency";
 import { CURRENCY_COOKIE } from "@/lib/currency-shared";
 import { getCategoryTree } from "@/lib/queries";
-import Script from "next/script";
-
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -132,22 +131,38 @@ function OrganisationSchema() {
   };
 
   return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
+/**
+ * Google Analytics 4.
+ *
+ * `afterInteractive` rather than `beforeInteractive`: gtag.js loads once the
+ * page is usable, so measurement never competes with the hero image for
+ * bandwidth on a phone. Analytics is not worth a slower first paint.
+ *
+ * There is deliberately no route-change listener here. GA4's enhanced
+ * measurement is on by default and already counts App Router navigations from
+ * History API changes — sending a manual `page_view` as well double-counts
+ * every page in the report, which is harder to spot than missing data.
+ */
+function GoogleAnalytics() {
+  return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-      />
       <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-9JTZH07RV2"
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
       />
-
       <Script id="google-analytics" strategy="afterInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
-          function gtag(){window.dataLayer.push(arguments);}
+          function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'G-9JTZH07RV2');
+          gtag('config', '${GA_MEASUREMENT_ID}');
         `}
       </Script>
     </>
@@ -205,6 +220,7 @@ export default async function RootLayout({
           </main>
           <Footer />
         </Providers>
+        <GoogleAnalytics />
       </body>
     </html>
   );

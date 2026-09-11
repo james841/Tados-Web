@@ -89,14 +89,14 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="flex rounded-lg border border-ink-200 bg-surface p-1">
+        <div className="flex w-full rounded-lg border border-ink-200 bg-surface p-1 sm:w-auto">
           {RANGES.map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => setRange(option.value)}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                "flex-1 rounded-md px-3 py-2 text-xs font-semibold transition-colors sm:flex-none sm:py-1.5",
                 range === option.value
                   ? "bg-ink-900 text-ink-50"
                   : "text-ink-600 hover:text-ink-900",
@@ -114,7 +114,10 @@ export default function AdminDashboardPage() {
         </p>
       ) : null}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Two-up on a phone rather than a single column: four full-width cards
+          would be most of a screen's height on their own, and the low-stock
+          banner and sales trend below them would start off-screen every time. */}
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label="Revenue"
           icon={Wallet}
@@ -154,7 +157,7 @@ export default function AdminDashboardPage() {
       {stats && stats.kpis.lowStock.value > 0 ? (
         <Link
           href="/admin/products?status=low"
-          className="mt-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100"
+          className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100"
         >
           <TriangleAlert size={18} className="shrink-0" />
           <span>
@@ -201,32 +204,41 @@ function StatCard({
   const good = invertDelta ? !rising : rising;
 
   return (
-    <div className="rounded-card border border-ink-200 bg-surface p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-ink-500">{label}</p>
-        <Icon size={16} className="text-ink-400" />
+    <div className="rounded-card border border-ink-200 bg-surface p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-sm font-medium text-ink-500">
+          {label}
+        </p>
+        <Icon size={16} className="shrink-0 text-ink-400" />
       </div>
 
       {value === null ? (
         <div className="mt-3 h-8 w-24 animate-pulse rounded bg-ink-100" />
       ) : (
-        <p className="mt-2 text-2xl font-bold tabular-nums text-ink-900">
+        <p className="mt-2 text-xl font-bold tabular-nums text-ink-900 sm:text-2xl">
           {value}
         </p>
       )}
 
       {delta !== undefined && value !== null ? (
+        // Wraps rather than truncates: at two cards to a phone screen this row
+        // is about 150px wide, and "vs previous" is the first thing worth
+        // dropping — the percentage and its arrow carry the meaning.
         <p
           className={cn(
-            "mt-1 flex items-center gap-1 text-xs font-semibold",
+            "mt-1 flex flex-wrap items-center gap-x-1 text-xs font-semibold",
             good ? "text-green-600" : "text-red-600",
           )}
         >
           {rising ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
           {Math.abs(delta).toFixed(1)}%
-          <span className="font-normal text-ink-400">vs previous</span>
+          <span className="hidden font-normal text-ink-400 sm:inline">
+            vs previous
+          </span>
           {footnote ? (
-            <span className="ml-auto font-normal text-ink-400">{footnote}</span>
+            <span className="w-full font-normal text-ink-400 sm:ml-auto sm:w-auto">
+              {footnote}
+            </span>
           ) : null}
         </p>
       ) : null}
@@ -252,7 +264,7 @@ function SalesTrend({
   return (
     <section
       className={cn(
-        "rounded-card border border-ink-200 bg-surface p-5",
+        "rounded-card border border-ink-200 bg-surface p-4 sm:p-5",
         className,
       )}
     >
@@ -293,7 +305,7 @@ function TopProducts({
   return (
     <section
       className={cn(
-        "rounded-card border border-ink-200 bg-surface p-5",
+        "rounded-card border border-ink-200 bg-surface p-4 sm:p-5",
         className,
       )}
     >
@@ -340,7 +352,7 @@ function TopProducts({
 
 function RecentOrders({ orders }: { orders: Stats["recentOrders"] | null }) {
   return (
-    <section className="mt-4 rounded-card border border-ink-200 bg-surface p-5">
+    <section className="mt-4 rounded-card border border-ink-200 bg-surface p-4 sm:p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-ink-900">Recent orders</h2>
         <Link
@@ -360,57 +372,101 @@ function RecentOrders({ orders }: { orders: Stats["recentOrders"] | null }) {
       ) : orders.length === 0 ? (
         <p className="mt-8 text-center text-sm text-ink-500">No orders yet.</p>
       ) : (
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-ink-200 text-xs uppercase tracking-wide text-ink-500">
-                <th className="py-2 pr-4 font-semibold">Order</th>
-                <th className="py-2 pr-4 font-semibold">Customer</th>
-                <th className="py-2 pr-4 font-semibold">Status</th>
-                <th className="py-2 text-right font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink-100">
-              {orders.map((order) => (
-                <tr
-                  key={order.id}
-                  className={cn(
-                    // An alpha of the accent fill, not `bg-accent-50`: no accent
-                    // token is redefined for dark mode, so the solid tint would
-                    // be a near-white band across a dark table.
-                    order.isNew && "bg-accent-500/10",
-                  )}
-                >
-                  <td className="py-2.5 pr-4">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="font-medium text-ink-900 hover:text-brand-700"
-                      >
-                        {order.orderNumber}
-                      </Link>
+        <>
+          {/* Cards on a phone, the table from `sm` up. */}
+          <ul className="mt-3 divide-y divide-ink-100 sm:hidden">
+            {orders.map((order) => (
+              <li
+                key={order.id}
+                className={cn(
+                  "-mx-2 flex items-center gap-3 rounded-lg px-2 py-3",
+                  order.isNew && "bg-accent-500/10",
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="text-sm font-medium text-ink-900 hover:text-brand-700"
+                    >
+                      {order.orderNumber}
+                    </Link>
 
-                      {order.isNew ? (
-                        <span className="inline-flex shrink-0 items-center rounded-full bg-accent-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white animate-alert-ring motion-reduce:animate-none">
-                          New
-                        </span>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="max-w-[200px] truncate py-2.5 pr-4 text-ink-600">
+                    {order.isNew ? (
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-accent-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white animate-alert-ring motion-reduce:animate-none">
+                        New
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <p className="truncate text-xs text-ink-500">
                     {order.user?.name ?? order.email}
-                  </td>
-                  <td className="py-2.5 pr-4">
+                  </p>
+
+                  <div className="mt-1.5">
                     <OrderStatusPill status={order.status} />
-                  </td>
-                  <td className="py-2.5 text-right font-semibold tabular-nums text-ink-900">
-                    {formatPrice(order.total)}
-                  </td>
+                  </div>
+                </div>
+
+                <p className="shrink-0 text-sm font-semibold tabular-nums text-ink-900">
+                  {formatPrice(order.total)}
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-3 hidden overflow-x-auto sm:block">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-ink-200 text-xs uppercase tracking-wide text-ink-500">
+                  <th className="py-2 pr-4 font-semibold">Order</th>
+                  <th className="py-2 pr-4 font-semibold">Customer</th>
+                  <th className="py-2 pr-4 font-semibold">Status</th>
+                  <th className="py-2 text-right font-semibold">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-ink-100">
+                {orders.map((order) => (
+                  <tr
+                    key={order.id}
+                    className={cn(
+                      // An alpha of the accent fill, not `bg-accent-50`: no
+                      // accent token is redefined for dark mode, so the solid
+                      // tint would be a near-white band across a dark table.
+                      order.isNew && "bg-accent-500/10",
+                    )}
+                  >
+                    <td className="py-2.5 pr-4">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-medium text-ink-900 hover:text-brand-700"
+                        >
+                          {order.orderNumber}
+                        </Link>
+
+                        {order.isNew ? (
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-accent-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white animate-alert-ring motion-reduce:animate-none">
+                            New
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="max-w-[200px] truncate py-2.5 pr-4 text-ink-600">
+                      {order.user?.name ?? order.email}
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <OrderStatusPill status={order.status} />
+                    </td>
+                    <td className="py-2.5 text-right font-semibold tabular-nums text-ink-900">
+                      {formatPrice(order.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );

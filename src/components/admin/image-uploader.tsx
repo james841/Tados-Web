@@ -338,7 +338,7 @@ export function ImageUploader({
           }}
           placeholder="…or paste an image URL"
           aria-label="Image URL"
-          className="min-w-0 flex-1 rounded-lg border border-ink-200 px-3 py-2 text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
+          className="min-w-0 flex-1 rounded-lg border border-ink-200 px-3 py-2 text-base text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900 sm:text-sm"
         />
         <button
           type="button"

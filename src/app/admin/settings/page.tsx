@@ -35,7 +35,7 @@ export default function AdminSettingsPage() {
       </header>
 
       <section className="rounded-card border border-ink-200 bg-surface">
-        <div className="border-b border-ink-200 px-6 py-4">
+        <div className="border-b border-ink-200 px-4 py-4 sm:px-6">
           <h2 className="font-bold text-ink-900">Store details</h2>
         </div>
 
@@ -47,7 +47,7 @@ export default function AdminSettingsPage() {
       </section>
 
       <section className="rounded-card border border-ink-200 bg-surface">
-        <div className="border-b border-ink-200 px-6 py-4">
+        <div className="border-b border-ink-200 px-4 py-4 sm:px-6">
           <h2 className="font-bold text-ink-900">Contact information</h2>
         </div>
 
@@ -70,7 +70,7 @@ export default function AdminSettingsPage() {
       </section>
 
       <section className="rounded-card border border-ink-200 bg-surface">
-        <div className="border-b border-ink-200 px-6 py-4">
+        <div className="border-b border-ink-200 px-4 py-4 sm:px-6">
           <h2 className="font-bold text-ink-900">Commerce</h2>
         </div>
 
@@ -133,13 +133,16 @@ function Row({
   mono?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1 px-6 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-      <dt className="flex items-center gap-2 font-medium text-ink-500">
+    // Stacked under `sm`, so the value sits below its own label — right-aligning
+    // it there pushed each value to the opposite edge from the thing naming it.
+    // Long values (the base URL, the description) wrap rather than overflow.
+    <div className="flex flex-col gap-1 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8 sm:px-6">
+      <dt className="flex shrink-0 items-center gap-2 font-medium text-ink-500">
         {icon}
         {label}
       </dt>
       <dd
-        className={`min-w-0 text-right text-ink-900 ${mono ? "font-mono text-xs leading-relaxed" : "font-semibold"}`}
+        className={`min-w-0 break-words text-left text-ink-900 sm:text-right ${mono ? "font-mono text-xs leading-relaxed" : "font-semibold"}`}
       >
         {value}
         {note ? (

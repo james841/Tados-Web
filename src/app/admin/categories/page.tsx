@@ -226,7 +226,120 @@ export default function AdminCategoriesPage() {
       ) : null}
 
       <div className="mt-6 overflow-hidden rounded-card border border-ink-200 bg-surface">
-        <div className="overflow-x-auto">
+        {/* The tree, as cards, under `md`.
+
+            Indent still carries the parent/child relationship — it's the whole
+            point of this screen — but at 20px a level rather than 24px, and
+            applied to the card instead of a cell, so a sub-category doesn't
+            push its own name off a 360px screen. */}
+        <div className="divide-y divide-ink-100 md:hidden">
+          {categories === null ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="p-4">
+                <div className="h-12 animate-pulse rounded bg-ink-100" />
+              </div>
+            ))
+          ) : rows.length === 0 ? (
+            <p className="px-4 py-12 text-center text-sm text-ink-500">
+              No categories yet. Create the first one to get started.
+            </p>
+          ) : (
+            rows.map(({ category, depth }) => {
+              const isOpen = expanded === category.id;
+
+              return (
+                <div
+                  key={category.id}
+                  className={cn("py-3 pr-3", isOpen && "bg-ink-50")}
+                  style={{ paddingLeft: 12 + depth * 20 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void toggleExpanded(category)}
+                      aria-expanded={isOpen}
+                      aria-label={`${isOpen ? "Hide" : "Show"} products in ${category.name}`}
+                      className="flex size-8 shrink-0 items-center justify-center rounded text-ink-400 transition-colors hover:bg-ink-200 hover:text-ink-900"
+                    >
+                      {isOpen ? (
+                        <ChevronDown size={16} />
+                      ) : (
+                        <ChevronRight size={16} />
+                      )}
+                    </button>
+
+                    <CategoryThumb category={category} />
+
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cn(
+                          "truncate text-sm text-ink-900",
+                          depth === 0 ? "font-bold" : "font-medium",
+                        )}
+                      >
+                        {category.name}
+                      </p>
+                      <p className="truncate text-xs text-ink-500">
+                        <code>{category.slug}</code> · {category.productCount}{" "}
+                        product{category.productCount === 1 ? "" : "s"}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(category)}
+                        aria-label={`Edit ${category.name}`}
+                        className="flex size-9 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-900"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(category)}
+                        aria-label={`Delete ${category.name}`}
+                        className="flex size-9 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {category.parentId === null ? null : (
+                    <label className="ml-10 mt-2 flex w-fit cursor-pointer items-center gap-2 py-1">
+                      <input
+                        type="checkbox"
+                        checked={category.featured}
+                        onChange={(event) =>
+                          void toggleFeatured(category, event.target.checked)
+                        }
+                        aria-label={`Show ${category.name} on the homepage`}
+                        className="size-4 rounded border-ink-300 text-ink-900 focus:ring-ink-900"
+                      />
+                      <span className="text-xs text-ink-500">
+                        {category.featured
+                          ? "Shown on the homepage"
+                          : "Hidden from the homepage"}
+                      </span>
+                    </label>
+                  )}
+
+                  {isOpen ? (
+                    <div className="mt-3">
+                      <ProductPanel
+                        category={category}
+                        products={products}
+                        onEdit={setEditingProduct}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
               <tr>
@@ -475,37 +588,49 @@ function ProductPanel({
     <div className="overflow-hidden rounded-lg border border-ink-200 bg-surface">
       <ul className="divide-y divide-ink-100">
         {products.map((product) => (
+          /* Name (plus the Inactive pill) on one line, the numbers on a second,
+             the edit button held to the right. The previous single wrapping row
+             put the SKU, price and stock in a different place on every card as
+             soon as the names differed in length. */
           <li
             key={product.id}
-            className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm sm:px-4"
           >
-            <span className="min-w-0 flex-1 truncate font-medium text-ink-900">
-              {product.name}
-            </span>
-            <span className="text-xs text-ink-500">{product.sku}</span>
-            <span className="tabular-nums text-ink-700">
-              {formatPrice(product.price)}
-            </span>
-            <span
-              className={cn(
-                "tabular-nums",
-                product.stock === 0 ? "text-red-600" : "text-ink-500",
-              )}
-            >
-              {product.stock} in stock
-            </span>
-            {!product.isActive ? (
-              <span className="rounded-full bg-ink-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-600">
-                Inactive
-              </span>
-            ) : null}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 truncate font-medium text-ink-900">
+                  {product.name}
+                </span>
+                {!product.isActive ? (
+                  <span className="shrink-0 rounded-full bg-ink-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-600">
+                    Inactive
+                  </span>
+                ) : null}
+              </div>
+
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-ink-500">
+                <span>{product.sku}</span>
+                <span className="tabular-nums text-ink-700">
+                  {formatPrice(product.price)}
+                </span>
+                <span
+                  className={cn(
+                    "tabular-nums",
+                    product.stock === 0 && "text-red-600",
+                  )}
+                >
+                  {product.stock} in stock
+                </span>
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={() => onEdit(product)}
               aria-label={`Edit ${product.name}`}
-              className="flex size-8 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-900"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-900"
             >
-              <Pencil size={15} />
+              <Pencil size={16} />
             </button>
           </li>
         ))}

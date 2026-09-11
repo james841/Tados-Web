@@ -19,6 +19,15 @@
 const PRODUCTION_ORIGIN = "https://www.tadossmarttech.com";
 
 /**
+ * Google Analytics 4 measurement ID.
+ *
+ * Not a secret — it ships in the page source of every GA-tracked site on the
+ * web, and restricting it would stop the tag working at all. Kept here rather
+ * than inline in the layout so the value appears exactly once.
+ */
+export const GA_MEASUREMENT_ID = "G-9JTZH07RV2";
+
+/**
  * The canonical origin — absolute, and never with a trailing slash.
  *
  * Paths are concatenated onto this everywhere (`${SITE.url}/products`), so one

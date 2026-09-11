@@ -30,6 +30,12 @@ const FILTERS = [
   { value: "low", label: "Low stock" },
 ];
 
+/** Red at zero, amber at or below the product's own threshold. */
+function stockTone(product: Pick<AdminProduct, "stock" | "lowStockAt">) {
+  if (product.stock === 0) return "text-red-600";
+  return product.stock <= product.lowStockAt ? "text-amber-600" : "text-ink-900";
+}
+
 export default function AdminProductsPage() {
   const { done, failed, confirm } = useAdminFeedback();
 
@@ -136,21 +142,27 @@ export default function AdminProductsPage() {
       </header>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1">
+        <div className="relative w-full sm:min-w-[220px] sm:flex-1">
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400"
           />
+          {/* 16px on a phone, 14px from `sm`. Anything under 16px makes iOS
+              Safari zoom the whole page in on focus, and it does not zoom back
+              out — you end up panning a magnified admin panel to find the
+              filters. Every input in this panel follows the same rule. */}
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name or SKU…"
             aria-label="Search products"
-            className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900"
+            className="w-full rounded-lg border border-ink-200 bg-surface py-2.5 pl-9 pr-3 text-base outline-none transition-colors placeholder:text-ink-400 focus:border-ink-900 sm:text-sm"
           />
         </div>
 
-        <div className="flex rounded-lg border border-ink-200 bg-surface p-1">
+        {/* Four equal thirds of the width on a phone rather than four
+            content-width chips crammed against the left edge. */}
+        <div className="flex w-full rounded-lg border border-ink-200 bg-surface p-1 sm:w-auto">
           {FILTERS.map((filter) => (
             <button
               key={filter.value}
@@ -160,7 +172,7 @@ export default function AdminProductsPage() {
                 setPage(1);
               }}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                "flex-1 rounded-md px-3 py-2 text-xs font-semibold transition-colors sm:flex-none sm:py-1.5",
                 status === filter.value
                   ? "bg-ink-900 text-ink-50"
                   : "text-ink-600 hover:text-ink-900",
@@ -179,7 +191,100 @@ export default function AdminProductsPage() {
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-card border border-ink-200 bg-surface">
-        <div className="overflow-x-auto">
+        {/* Under `md` the six-column table becomes a list of cards.
+
+            `overflow-x-auto` was technically a fit, but it meant dragging every
+            single row sideways to reach the price, the stock count and the two
+            action buttons — on the one screen size where a horizontal drag is
+            most easily mistaken for a swipe between pages. A card shows the
+            whole product at once and puts the actions under a thumb. */}
+        <div className="divide-y divide-ink-100 md:hidden">
+          {products === null ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="p-4">
+                <div className="h-14 animate-pulse rounded bg-ink-100" />
+              </div>
+            ))
+          ) : products.length === 0 ? (
+            <p className="px-4 py-12 text-center text-sm text-ink-500">
+              No products match those filters.
+            </p>
+          ) : (
+            products.map((product) => (
+              <div key={product.id} className="flex gap-3 p-4">
+                <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-ink-100">
+                  {product.image ? (
+                    <Image
+                      src={product.image}
+                      alt=""
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                    />
+                  ) : null}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 text-sm font-medium leading-snug text-ink-900">
+                      {product.name}
+                    </p>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                        product.isActive
+                          ? "bg-green-100 text-green-800"
+                          : "bg-ink-200 text-ink-600",
+                      )}
+                    >
+                      {product.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+
+                  <p className="mt-0.5 truncate text-xs text-ink-500">
+                    {product.sku}
+                    {product.category ? ` · ${product.category.name}` : ""}
+                  </p>
+
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold tabular-nums text-ink-900">
+                      {formatPrice(product.price)}
+                      <span
+                        className={cn(
+                          "ml-2 text-xs font-medium",
+                          stockTone(product),
+                        )}
+                      >
+                        {product.stock} in stock
+                      </span>
+                    </p>
+
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(product)}
+                        aria-label={`Edit ${product.name}`}
+                        className="flex size-9 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-900"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(product)}
+                        aria-label={`Deactivate ${product.name}`}
+                        className="flex size-9 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
               <tr>
@@ -247,11 +352,7 @@ export default function AdminProductsPage() {
                       <span
                         className={cn(
                           "font-semibold tabular-nums",
-                          product.stock === 0
-                            ? "text-red-600"
-                            : product.stock <= product.lowStockAt
-                              ? "text-amber-600"
-                              : "text-ink-900",
+                          stockTone(product),
                         )}
                       >
                         {product.stock}
