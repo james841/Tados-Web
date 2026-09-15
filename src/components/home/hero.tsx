@@ -491,22 +491,34 @@ export function BrandStrip() {
   return (
     <section
       aria-label="Brands we stock"
-      className="relative z-10 border-b border-ink-100 bg-white py-8"
+      className="relative z-10 border-b border-ink-200 bg-white py-7"
     >
-      <div className="container-page">
-        <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-widest text-ink-400 sm:text-left">
-          Featured Brand
+      <div className="container-page flex flex-col items-center gap-5 lg:flex-row lg:gap-10">
+        {/* Inline with the names on a wide screen rather than stacked above
+            them. Left-aligned on its own line it read as a heading for the whole
+            page, not a label for the one row it belongs to. */}
+        <p className="flex shrink-0 items-center gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-400">
+          Brands we stock
+          <span
+            aria-hidden="true"
+            className="hidden h-4 w-px bg-ink-200 lg:block"
+          />
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:justify-between">
+
+        <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 lg:flex-1 lg:justify-between">
           {brands.map((brand) => (
-            <span
+            <li
               key={brand}
-              className="text-lg font-bold tracking-tight text-ink-300 transition-all duration-300 hover:scale-105 hover:text-ink-800"
+              /* ink-400 rather than ink-300: at 0.82 lightness on white these
+                 sat near 1.9:1 and read as a watermark rather than as the names
+                 of the brands we stock. No hover lift either — they aren't
+                 links, and raising them promised a click that never comes. */
+              className="text-lg font-bold tracking-tight text-ink-400 transition-colors duration-300 hover:text-ink-900"
             >
               {brand}
-            </span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );
@@ -599,6 +611,11 @@ export function DealBanners() {
       href: "/category/smart-locks",
       image: "/gigi.jpg",
       bgColor: "bg-ink-950",
+      /* Matched to the card's own ground so the photo dissolves into it.
+         Previously both cards masked the image with a flat `bg-ink-950`
+         rectangle, which on the ink-900 card below showed up as a darker stripe
+         down the middle of its own artwork. */
+      fade: "from-ink-950 via-ink-950/55",
     },
     {
       title: "Alarm Systems",
@@ -606,18 +623,20 @@ export function DealBanners() {
       href: "/category/alarms-detection",
       image: "/videoframe.png",
       bgColor: "bg-ink-900",
+      fade: "from-ink-900 via-ink-900/55",
     },
-   
   ];
 
   return (
-    <section className="container-page py-4">
+    // Was `py-4`, between two sections at py-16 — the pair sat jammed against
+    // the shelf above them and read as an afterthought rather than an offer.
+    <section className="container-page py-12 sm:py-16">
       <div className="grid gap-6 sm:grid-cols-2">
         {deals.map((deal) => (
           <Link
             key={deal.href}
             href={deal.href}
-            className={`group relative flex min-h-[220px] flex-col justify-center overflow-hidden rounded-3xl ${deal.bgColor} p-8 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}
+            className={`group relative flex min-h-[220px] flex-col justify-center overflow-hidden rounded-3xl ${deal.bgColor} p-8 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:min-h-[260px]`}
           >
             <div className="relative z-10 max-w-[60%]">
               <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-white/70">
@@ -627,7 +646,7 @@ export function DealBanners() {
                 {deal.title}
               </h3>
               <p className="mt-1 text-sm font-semibold text-white/90">{deal.subtitle}</p>
-              
+
               <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-ink-950 shadow-sm transition-all duration-300 group-hover:bg-white/90">
                 Shop now
                 <ArrowRight
@@ -637,15 +656,20 @@ export function DealBanners() {
               </span>
             </div>
 
-            <div className="absolute bottom-0 right-0 top-0 w-1/2 opacity-80 transition-transform duration-500 group-hover:scale-105">
-              {/* Solid left edge mask for image transition */}
-              <div className="absolute inset-y-0 left-0 w-16 bg-ink-950 z-10 hidden sm:block" />
+            <div className="absolute bottom-0 right-0 top-0 w-3/5 transition-transform duration-500 group-hover:scale-105 sm:w-1/2">
               <Image
                 fill
                 src={deal.image}
                 alt=""
-                sizes="(max-width: 640px) 50vw, 25vw"
+                sizes="(max-width: 640px) 60vw, 25vw"
                 className="object-cover"
+              />
+              {/* The card colour bleeding across the photo's left edge. A
+                  gradient rather than the old solid block: it hides the seam at
+                  any card width, and it keeps working when the copy beside it
+                  runs long. */}
+              <div
+                className={`absolute inset-0 bg-gradient-to-r ${deal.fade} to-transparent`}
               />
             </div>
           </Link>

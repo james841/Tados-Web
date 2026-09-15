@@ -185,11 +185,13 @@ export function StarRating({
 }
 
 /* ---------------------------------------------------------------
-   Section heading — a title, optional subtitle and a "View all →" link.
+   Section heading — an optional eyebrow, a title, optional subtitle
+   and a "View all →" link.
    --------------------------------------------------------------- */
 
 export function SectionHeading({
   title,
+  eyebrow,
   subtitle,
   href,
   linkLabel = "View all Products",
@@ -197,35 +199,76 @@ export function SectionHeading({
   className,
 }: {
   title: string;
+  /**
+   * A short structural label above the title — "Shop by category".
+   *
+   * Set as a rule-and-label rather than a pill on purpose. The homepage already
+   * uses pills for *status* ("Just landed", "Mega Sale"), and reusing that shape
+   * for a section name would make a permanent heading look like a badge that
+   * might expire. Rules mark structure; pills mark state.
+   */
+  eyebrow?: string;
   subtitle?: string;
   href?: string;
   linkLabel?: string;
   align?: "left" | "center";
   className?: string;
 }) {
+  const centered = align === "center";
+
   return (
     <div
       className={cn(
         "mb-6 gap-4 sm:mb-8",
-        align === "center"
+        centered
           ? "flex flex-col items-center text-center"
           : "flex flex-wrap items-end justify-between",
         className,
       )}
     >
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+        {eyebrow ? (
+          <p
+            className={cn(
+              "flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700",
+              centered && "justify-center",
+            )}
+          >
+            <span aria-hidden="true" className="h-px w-6 bg-brand-500" />
+            {eyebrow}
+            {centered ? (
+              <span aria-hidden="true" className="h-px w-6 bg-brand-500" />
+            ) : null}
+          </p>
+        ) : null}
+
+        <h2
+          className={cn(
+            "text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl",
+            eyebrow && "mt-2.5",
+          )}
+        >
           {title}
         </h2>
         {subtitle ? (
-          <p className="mt-1.5 max-w-2xl text-sm text-ink-500">{subtitle}</p>
+          <p
+            className={cn(
+              "mt-1.5 max-w-2xl text-sm text-ink-500",
+              centered && "mx-auto",
+            )}
+          >
+            {subtitle}
+          </p>
         ) : null}
       </div>
 
       {href ? (
+        // A bordered pill rather than bare text. As a plain link it read as part
+        // of the heading block and got skipped; the border is what makes it look
+        // like something you can press.
         <Link
           href={href}
-          className="group inline-flex items-center gap-1.5 text-sm font-semibold text-ink-700 transition-colors hover:text-brand-700"
+          className="group inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink-200 px-4 py-2 text-sm font-semibold text-ink-700 transition-colors hover:border-ink-900 hover:bg-ink-950 hover:text-white"
         >
           {linkLabel}
           <span

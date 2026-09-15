@@ -204,9 +204,16 @@ export function CategoryCarousel({
     >
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4 sm:mb-8">
         <div>
+          {/* Same rule-and-label as the other shelves on the homepage. Three
+              sections that each introduced themselves differently made the page
+              read as assembled rather than designed. */}
+          <p className="flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700">
+            <span aria-hidden="true" className="h-px w-6 bg-brand-500" />
+            Shop by category
+          </p>
           <h2
             id="popular-categories"
-            className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl"
+            className="mt-2.5 text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl"
           >
             Most Popular Categories
           </h2>
@@ -218,7 +225,7 @@ export function CategoryCarousel({
         <div className="flex items-center gap-3">
           <Link
             href="/products"
-            className="group hidden items-center gap-1.5 text-sm font-semibold text-ink-700 transition-colors hover:text-brand-700 sm:inline-flex"
+            className="group hidden shrink-0 items-center gap-1.5 rounded-full border border-ink-200 px-4 py-2 text-sm font-semibold text-ink-700 transition-colors hover:border-ink-900 hover:bg-ink-950 hover:text-white sm:inline-flex"
           >
             Browse all products
             <span
