@@ -12,7 +12,7 @@ import {
   type SearchSuggestion,
 } from "@/lib/search";
 import { PRODUCTS_PER_PAGE, type SortOption } from "@/lib/constants";
-import { toNumber } from "@/lib/utils";
+import { toNumber, discountPercent } from "@/lib/utils";
 
 /**
  * Catalogue read layer.
@@ -288,6 +288,70 @@ export async function getNewArrivals(limit = 8): Promise<ProductCardData[]> {
       select: productCardSelect,
     });
     return rows.map(toProductCard);
+  });
+}
+
+export interface DealStats {
+  /** Best discount anywhere in the catalogue, whole percent. Null if nothing is reduced. */
+  maxPercent: number | null;
+  /** How many active products are currently reduced. */
+  count: number;
+  /**
+   * Best discount inside each category, keyed by slug. Both the leaf and its
+   * parent are keyed, so a banner pointing at a top-level category reports the
+   * best price in the whole tree beneath it rather than nothing.
+   */
+  byCategory: Record<string, number>;
+}
+
+/**
+ * The real discount figures for the homepage banners.
+ *
+ * The banners used to carry three hard-coded percentages — "Save up to 25%",
+ * "Up to 20% Off", "Up to 18% Off" — none of which came from the catalogue.
+ * That cuts both ways: it understates a genuine 40% reduction, and it
+ * advertises a saving that may not exist at all, which under the Consumer
+ * Protection Act is a misrepresentation rather than a rounding error.
+ *
+ * Cheap enough to compute in JavaScript: this reads only the two price columns
+ * of products that are actually reduced, and the whole catalogue is small.
+ */
+export async function getDealStats(): Promise<DealStats> {
+  return cached(cacheKeys.homeDeals, 600, async () => {
+    const rows = await prisma.product.findMany({
+      where: { isActive: true, compareAtPrice: { not: null } },
+      select: {
+        price: true,
+        compareAtPrice: true,
+        category: {
+          select: { slug: true, parent: { select: { slug: true } } },
+        },
+      },
+    });
+
+    let maxPercent = 0;
+    let count = 0;
+    const byCategory: Record<string, number> = {};
+
+    for (const row of rows) {
+      const percent = discountPercent(
+        toNumber(row.price),
+        row.compareAtPrice === null ? null : toNumber(row.compareAtPrice),
+      );
+      // `compareAtPrice` set at or below `price` is not a discount. The column
+      // being non-null is not enough on its own.
+      if (percent === null) continue;
+
+      count += 1;
+      maxPercent = Math.max(maxPercent, percent);
+
+      for (const slug of [row.category.slug, row.category.parent?.slug]) {
+        if (!slug) continue;
+        byCategory[slug] = Math.max(byCategory[slug] ?? 0, percent);
+      }
+    }
+
+    return { maxPercent: count > 0 ? maxPercent : null, count, byCategory };
   });
 }
 

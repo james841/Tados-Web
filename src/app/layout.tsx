@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import Script from "next/script";
+import { Archivo } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -9,6 +10,31 @@ import { GA_MEASUREMENT_ID, SITE } from "@/lib/constants";
 import { resolveCurrency } from "@/lib/currency";
 import { CURRENCY_COOKIE } from "@/lib/currency-shared";
 import { getCategoryTree } from "@/lib/queries";
+
+/**
+ * The display face — headlines, section titles, prices, numerals.
+ *
+ * The site ran entirely on the system stack, which is why every heading looked
+ * like the operating system rather than like a brand: Segoe UI on Windows, San
+ * Francisco on a Mac, Roboto on Android. No two visitors saw the same page, and
+ * none of them saw a typeface anybody chose.
+ *
+ * Archivo is a grotesque cut for headlines and signage, and it holds up at the
+ * heavy weights this page leans on — which the system UI faces do not, because
+ * they were drawn for menus and dialogs at 13px. Body copy deliberately stays
+ * on the system stack: it is what those faces are good at, it costs nothing to
+ * download, and the contrast between the two registers is the point.
+ *
+ * `display: "swap"` so text paints immediately in the fallback and reflows when
+ * the font lands, rather than holding the headline blank. Self-hosted by
+ * `next/font` at build time — no request to Google from the visitor's browser,
+ * which keeps the page out of the GDPR/POPIA argument about font CDNs.
+ */
+const displayFont = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -196,7 +222,7 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang="en-ZA">
+    <html lang="en-ZA" className={displayFont.variable}>
       <head>
         <link rel="preconnect" href="https://sandbox.payfast.co.za" />
         <OrganisationSchema />

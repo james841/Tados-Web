@@ -231,7 +231,7 @@ export function NewArrivalsCarousel({
     <section
       aria-labelledby="new-arrivals"
       aria-roledescription="carousel"
-      className={cn("container-page py-12 sm:py-16", className)}
+      className={cn("container-page py-14 sm:py-20", className)}
     >
       <div className="flex flex-col items-center text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-700">
@@ -422,7 +422,7 @@ function RailButton({
 /** Suspense fallback that reserves the same height, so CLS stays at zero. */
 export function NewArrivalsCarouselSkeleton() {
   return (
-    <section className="container-page py-12 sm:py-16">
+    <section className="container-page py-14 sm:py-20">
       <div className="flex flex-col items-center">
         <div className="skeleton h-6 w-28 rounded-full" />
         <div className="skeleton mt-3 h-8 w-72 rounded" />

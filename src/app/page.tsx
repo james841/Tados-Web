@@ -18,10 +18,60 @@ import {
 import { ProductGrid } from "@/components/product/product-card";
 import { SectionHeading, ProductCardSkeleton } from "@/components/ui";
 import {
+  getDealStats,
   getFeaturedCategories,
   getFeaturedProducts,
   getNewArrivals,
 } from "@/lib/queries";
+
+/**
+ * The two marketing bands read their percentages from the catalogue.
+ *
+ * Both are client components and both want the same Redis-cached query, so
+ * they get a thin async wrapper each rather than making `HomePage` itself
+ * async: the hero and the brand strip then still paint without waiting on a
+ * number that only matters further down the page.
+ */
+async function PromoSection() {
+  const { maxPercent } = await getDealStats();
+
+  return <PromoBand maxPercent={maxPercent} />;
+}
+
+async function DealSection() {
+  const { byCategory } = await getDealStats();
+
+  return <DealBanners byCategory={byCategory} />;
+}
+
+/**
+ * Suspense fallbacks for the two bands above.
+ *
+ * Both reserve the real card geometry — including the promo row's 1:2 split —
+ * so nothing jumps when the query resolves, which is the one thing a fallback
+ * exists to prevent.
+ */
+function PromoSkeleton() {
+  return (
+    <section className="container-page py-14 sm:py-20">
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="skeleton h-[300px] rounded-lg" />
+        <div className="skeleton h-[300px] rounded-lg lg:col-span-2" />
+      </div>
+    </section>
+  );
+}
+
+function DealSkeleton() {
+  return (
+    <section className="container-page py-14 sm:py-20">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="skeleton h-[220px] rounded-lg sm:h-[260px]" />
+        <div className="skeleton h-[220px] rounded-lg sm:h-[260px]" />
+      </div>
+    </section>
+  );
+}
 
 async function CategorySection() {
   const categories = await getFeaturedCategories();
@@ -57,11 +107,15 @@ async function FeaturedSection() {
  *
  * Shared with the Suspense fallback below so the band doesn't flash white and
  * then tint as the products resolve.
+ *
+ * The inner padding matches the `py-14 sm:py-20` every other section on the
+ * page now uses. It was one step shorter, which on a band that also has rules
+ * top and bottom made the shelf look cramped next to its neighbours.
  */
 function FeaturedBand({ children }: { children: ReactNode }) {
   return (
     <section className="border-y border-ink-200 bg-ink-100">
-      <div className="container-page py-12 sm:py-16">{children}</div>
+      <div className="container-page py-14 sm:py-20">{children}</div>
     </section>
   );
 }
@@ -80,12 +134,14 @@ export default function HomePage() {
       <Suspense fallback={<CategoryCarouselSkeleton />}>
         <CategorySection />
       </Suspense>
-      <PromoBand />
+      <Suspense fallback={<PromoSkeleton />}>
+        <PromoSection />
+      </Suspense>
       <Suspense
         fallback={
           <FeaturedBand>
             <div className="skeleton h-3 w-28 rounded" />
-            <div className="skeleton mt-3 h-8 w-72 max-w-full rounded" />
+            <div className="skeleton mt-3 h-9 w-72 max-w-full rounded" />
             <div className="skeleton mt-3 h-4 w-[34rem] max-w-full rounded" />
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -97,7 +153,9 @@ export default function HomePage() {
       >
         <FeaturedSection />
       </Suspense>
-      <DealBanners />
+      <Suspense fallback={<DealSkeleton />}>
+        <DealSection />
+      </Suspense>
       <LifestyleCta />
       {/* Last section on the page — the footer's trust strip follows it. */}
       <Suspense fallback={<NewArrivalsCarouselSkeleton />}>

@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Star,
   ArrowRight,
   Pause,
   Play,
   ShieldCheck,
   Sparkles,
+  Truck,
+  Wrench,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -20,7 +21,13 @@ import {
 
 import { Logo } from "@/components/layout/logo";
 import { ButtonLink } from "@/components/ui";
-import { CITIES_SENTENCE, DELIVERY_WINDOW, SITE } from "@/lib/constants";
+import {
+  CITIES_DIVIDED,
+  CITIES_SENTENCE,
+  DELIVERY_WINDOW,
+  SITE,
+} from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 /** How long each slide stays on screen, in milliseconds. */
 const SLIDE_DURATION = 6000;
@@ -306,21 +313,31 @@ export function Hero() {
 
         <div className="container-page relative z-20 flex h-full items-center">
           <div className="max-w-2xl py-20 sm:py-28 lg:py-32">
-            {/* Social Proof Badge */}
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-md transition-colors hover:border-white/20">
-              <div className="flex" aria-hidden="true">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star
-                    key={i}
-                    size={13}
-                    className="fill-amber-400 text-amber-400"
-                  />
-                ))}
-              </div>
-              <div className="h-3.5 w-px bg-white/20" />
-              <span className="text-xs font-semibold tracking-wide text-white/90">
-                438 reviews on{" "}
-                <span className="text-emerald-400">Trustpilot</span>
+            {/* Two claims the business can actually stand behind.
+
+                This was a pill reading "438 reviews on Trustpilot", with the
+                count hard-coded and no Trustpilot profile behind it. A shopper
+                who goes looking for those reviews and finds nothing has learned
+                something far more damaging than the badge ever bought — and
+                under the Consumer Protection Act an invented review count is a
+                false representation, not marketing licence.
+
+                What replaces it answers what a South African shopper actually
+                hesitates over on a R9 000 door lock: will it arrive, and can
+                somebody fit it. Both are true, and both are stated elsewhere on
+                the site, so nothing here can drift out of step on its own. */}
+            <div className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md transition-colors hover:border-white/20">
+              <span className="flex items-center gap-2 text-xs font-semibold tracking-wide text-white/90">
+                <Truck size={13} className="text-brand-400" aria-hidden="true" />
+                Nationwide delivery in {DELIVERY_WINDOW}
+              </span>
+              <span
+                aria-hidden="true"
+                className="hidden h-3.5 w-px bg-white/20 sm:block"
+              />
+              <span className="flex items-center gap-2 text-xs font-semibold tracking-wide text-white/90">
+                <Wrench size={13} className="text-brand-400" aria-hidden="true" />
+                Installation in {CITIES_DIVIDED}
               </span>
             </div>
 
@@ -345,10 +362,16 @@ export function Hero() {
                 ) : null}
 
                 <motion.h1
+                  /* `tracking-[-0.025em]` rather than `tracking-tight`:
+                     Archivo's default sidebearings are drawn for text sizes, and
+                     at 72px the gaps between letters open up enough to read as
+                     a gap in the word. Display type needs negative tracking in
+                     proportion to its size, which is why the mobile step is
+                     looser than the desktop one. */
                   className={
                     slide.showLogo
-                      ? "mt-5 text-3xl font-black leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
-                      : "mt-6 text-4xl font-black leading-[1.08] tracking-tight text-white sm:text-6xl lg:text-7xl"
+                      ? "mt-5 font-display text-3xl font-black leading-[1.08] tracking-[-0.02em] text-white sm:text-5xl lg:text-6xl"
+                      : "mt-6 font-display text-[2.6rem] font-black leading-[1.02] tracking-[-0.02em] text-white sm:text-6xl sm:tracking-[-0.025em] lg:text-7xl"
                   }
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -356,6 +379,11 @@ export function Hero() {
                 >
                   {slide.title}
                   <br />
+                  {/* The accent half of the headline carries the brand green.
+                      A gradient wash was the alternative and it loses: on a
+                      photographic hero the top of each letter goes pale enough
+                      to drop under 3:1 against a bright patch of the image,
+                      and it reads as a rendering fault rather than a flourish. */}
                   <span className="text-brand-400">{slide.titleAccent}</span>
                 </motion.h1>
 
@@ -485,102 +513,225 @@ export function Hero() {
   );
 }
 
-export function BrandStrip() {
-  const brands = ["Tuya", "Aqara", "Hikvision", "Sonoff", "Smart Life", "Zigbee"];
+/**
+ * The brands we stock.
+ *
+ * `logo` is optional and there are no files behind it yet — drop a one-colour
+ * PNG or SVG into `public/brands/` and fill the field in, and that brand
+ * switches from a wordmark to its mark with no other change. Nothing here
+ * invents a logo we have neither a file nor a licence for.
+ */
+const BRANDS: { name: string; logo?: string }[] = [
+  { name: "Tuya" },
+  { name: "Aqara" },
+  { name: "Hikvision" },
+  { name: "Sonoff" },
+  { name: "Smart Life" },
+  { name: "Zigbee" },
+];
 
+/**
+ * One pass of the brand list.
+ *
+ * `min-w-[100vw]` is what makes the loop safe at any window size. The track
+ * holds two of these and travels exactly one of them, so a pass narrower than
+ * the screen would drag a bare patch of green behind the last name on a wide
+ * monitor. Viewport units rather than a percentage because the track is
+ * `w-max` — a percentage width inside a max-content box has nothing to resolve
+ * against.
+ *
+ * `duplicate` marks the second copy decorative. Without it a screen reader
+ * announces all six brands twice and the repeat sounds like a page fault.
+ */
+function BrandRow({ duplicate }: { duplicate?: boolean }) {
   return (
+    <ul
+      aria-hidden={duplicate}
+      className={cn(
+        "flex min-w-[100vw] shrink-0 items-center justify-around gap-x-10 px-5 sm:gap-x-14",
+        // With the animation off, a pass wider than its container is simply cut
+        // off — so reduced motion gets a plain centred list instead.
+        "motion-reduce:w-full motion-reduce:min-w-0 motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:gap-y-3",
+        duplicate && "motion-reduce:hidden",
+      )}
+    >
+      {BRANDS.map((brand) => (
+        <li key={brand.name} className="shrink-0">
+          {brand.logo ? (
+            /* Forced to flat white. Partner logos are drawn for white paper and
+               most of them disappear on a dark green band; a one-colour
+               reversed treatment is what brand guidelines generally permit for
+               exactly this placement, and it keeps six different marks looking
+               like one row rather than six stickers. */
+            <Image
+              src={brand.logo}
+              alt={brand.name}
+              width={132}
+              height={36}
+              className="h-7 w-auto object-contain opacity-80 brightness-0 invert transition-opacity duration-300 hover:opacity-100"
+            />
+          ) : (
+            <span className="font-display text-lg font-bold tracking-[-0.01em] text-white/80 transition-colors duration-300 hover:text-white sm:text-xl">
+              {brand.name}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function BrandStrip() {
+  return (
+    /* Brand green, from the palette rather than Tailwind's emerald/teal
+       defaults — those are a different hue to everything else on the page, so
+       the band read as borrowed from another site. `brand-700` sits deliberately
+       between the near-black hero above and the white shelf below, which is the
+       job this strip has in the scroll. */
     <section
       aria-label="Brands we stock"
-      className="relative z-10 border-b border-ink-200 bg-white py-7"
+      className="relative z-10 overflow-hidden bg-brand-700 py-6"
     >
-      <div className="container-page flex flex-col items-center gap-5 lg:flex-row lg:gap-10">
-        {/* Inline with the names on a wide screen rather than stacked above
-            them. Left-aligned on its own line it read as a heading for the whole
-            page, not a label for the one row it belongs to. */}
-        <p className="flex shrink-0 items-center gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-400">
+      {/* One soft highlight off the top-left so a full-bleed band of flat green
+          has some light in it. A radial rather than a linear wash: a gradient
+          stretched across the full width of a band this shallow bands visibly
+          on an 8-bit display. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-24 -top-32 size-80 rounded-full bg-brand-400/25 blur-3xl"
+      />
+
+      <div className="container-page relative flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
+        {/* The rule-and-label shape the section headings already use, so this
+            reads as a structural label for the row beside it rather than as one
+            more badge. Static while the names move: a label that scrolls away
+            is a label that has stopped explaining anything.
+
+            The pulsing dot that was here is gone. A pulse means "live" — an
+            unread order, a running job — and six brand names are not an event.
+            It also never stops, which is exactly what a vestibular-sensitivity
+            setting is asking you to turn off. */}
+        <p className="flex shrink-0 items-center gap-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-200">
+          <span aria-hidden="true" className="h-px w-5 bg-brand-300/60" />
           Brands we stock
-          <span
-            aria-hidden="true"
-            className="hidden h-4 w-px bg-ink-200 lg:block"
-          />
         </p>
 
-        <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 lg:flex-1 lg:justify-between">
-          {brands.map((brand) => (
-            <li
-              key={brand}
-              /* ink-400 rather than ink-300: at 0.82 lightness on white these
-                 sat near 1.9:1 and read as a watermark rather than as the names
-                 of the brands we stock. No hover lift either — they aren't
-                 links, and raising them promised a click that never comes. */
-              className="text-lg font-bold tracking-tight text-ink-400 transition-colors duration-300 hover:text-ink-900"
-            >
-              {brand}
-            </li>
-          ))}
-        </ul>
+        {/* The mask is what separates a marquee from clipped overflow: names
+            dissolve at both ends instead of being sliced by an invisible edge.
+            The stops are kept tight so the readable middle stays as wide as
+            possible. */}
+        <div className="group relative flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
+          {/* Pauses under the cursor, so anyone who wants to read a name that
+              is halfway past can stop it rather than wait 45 seconds for it to
+              come round again. */}
+          <div className="flex w-max animate-marquee group-hover:[animation-play-state:paused] motion-reduce:w-full motion-reduce:animate-none">
+            <BrandRow />
+            <BrandRow duplicate />
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-export function PromoBand() {
+/**
+ * The two-card promo row.
+ *
+ * `maxPercent` is the real best discount in the catalogue, measured by
+ * `getDealStats()` — not a number typed into the markup. When nothing is
+ * reduced it is null and the card sells the range instead of a saving, which is
+ * the whole reason it is a prop: a hard-coded "Save up to 25%" keeps promising
+ * a sale through every week there isn't one.
+ */
+export function PromoBand({ maxPercent }: { maxPercent: number | null }) {
+  const hasDeals = maxPercent !== null && maxPercent > 0;
+
   return (
-    <section className="container-page py-16 sm:py-20">
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Mega Sale Card - Solid Brand Color */}
+    <section className="container-page py-14 sm:py-20">
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* Savings card — brand fill */}
         <Link
-          href="/products?onSale=1"
-          className="group relative flex min-h-[300px] flex-col justify-between overflow-hidden rounded-3xl bg-brand-600 p-8 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+          href={hasDeals ? "/products?onSale=1" : "/products"}
+          className="group relative flex min-h-[300px] flex-col justify-between overflow-hidden rounded-lg bg-brand-600 p-8 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
         >
+          {/* A single soft highlight off the top-left, so a 300px panel of flat
+              brand green has some light in it. Kept as one radial rather than a
+              linear gradient: a linear wash across a card this size bands
+              visibly on an 8-bit display. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-16 -top-16 size-64 rounded-full bg-white/10 blur-3xl"
+          />
+
           <div className="relative z-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-300 backdrop-blur-md border border-white/10">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-300 backdrop-blur-md">
               <Sparkles size={12} />
-              Mega Sale
+              {hasDeals ? "On sale now" : "Full range"}
             </span>
-            <p className="mt-4 text-3xl font-black leading-none tracking-tight">
-              Save up to
-              <br />
-              <span className="text-6xl font-black text-amber-300">
-                25%
-              </span>
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-white/80">
-              Big savings on every smart security essential
+
+            {hasDeals ? (
+              <>
+                <p className="mt-5 font-display text-2xl font-bold leading-none tracking-[-0.01em] text-white/85">
+                  Save up to
+                </p>
+                {/* The one genuinely large numeral on the page. `tabular-nums`
+                    keeps the glyphs on the same metrics as the catalogue's
+                    prices, and the percent sign is stepped down because at the
+                    same size it competes with the number it qualifies. */}
+                <p className="mt-1 font-display text-7xl font-black leading-[0.85] tracking-[-0.04em] tabular-nums text-amber-300">
+                  {maxPercent}
+                  <span className="align-top text-4xl tracking-normal">%</span>
+                </p>
+              </>
+            ) : (
+              <p className="mt-5 font-display text-4xl font-black leading-[1.05] tracking-[-0.025em]">
+                The complete
+                <br />
+                range
+              </p>
+            )}
+
+            <p className="mt-4 max-w-[22ch] text-sm leading-relaxed text-white/80">
+              {hasDeals
+                ? "Reduced across smart locks, alarm panels and automation."
+                : "Smart locks, alarms, padlocks, switches, curtains and audio."}
             </p>
           </div>
 
           <span className="relative z-10 mt-6 inline-flex items-center gap-2 text-sm font-bold tracking-wide">
-            Shop deals
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition-all duration-300 group-hover:bg-white group-hover:text-brand-700">
+            {hasDeals ? "Shop deals" : "Browse everything"}
+            <span className="flex size-7 items-center justify-center rounded-full bg-white/15 transition-all duration-300 group-hover:bg-white group-hover:text-brand-700">
               <ArrowRight
                 size={14}
                 className="transition-transform group-hover:translate-x-0.5"
               />
-            </div>
+            </span>
           </span>
         </Link>
 
-        {/* Highest Rated Card - Off-White Neutral Container */}
+        {/* Highest rated — neutral container */}
         <Link
           href="/products?sort=rating"
-          className="group relative flex min-h-[300px] flex-col justify-center overflow-hidden rounded-3xl border border-ink-200 bg-ink-50 p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-ink-300 hover:shadow-lg lg:col-span-2 sm:p-10"
+          className="group relative flex min-h-[300px] flex-col justify-center overflow-hidden rounded-lg border border-ink-200 bg-ink-50 p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-ink-300 hover:shadow-lg sm:p-10 lg:col-span-2"
         >
           <div className="relative z-10 max-w-md">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-900">
-              Top Rated Choices
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-900">
+              Top rated
             </span>
-            <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight text-ink-950 sm:text-4xl">
-              Explore Our
+            <h2 className="mt-3 font-display text-3xl font-extrabold leading-[1.05] tracking-[-0.025em] text-ink-950 sm:text-[2.6rem]">
+              The ones people
               <br />
-              Highest Rated
+              rate highest
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-ink-600">
-              Check out our top-rated smart devices, trusted by thousands of
-              South African homes and businesses.
+            {/* Was "trusted by thousands of South African homes and
+                businesses" — a number nobody counted. Sorting by rating is a
+                real, checkable claim about what the link does. */}
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink-600">
+              Sorted by customer rating, best first — so the top of the list is
+              the kit our buyers actually recommend.
             </p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-ink-950 transition-colors group-hover:text-brand-600">
-              View All
+              View all
               <ArrowRight
                 size={16}
                 className="transition-transform duration-300 group-hover:translate-x-1.5"
@@ -603,11 +754,29 @@ export function PromoBand() {
   );
 }
 
-export function DealBanners() {
+/**
+ * The two category banners.
+ *
+ * `byCategory` is keyed by slug and holds the real best discount inside each
+ * tree, so a card only claims a saving on a week one exists. The two subtitles
+ * used to read "Up to 20% Off!" and "Up to 18% Off!" — numbers that were typed
+ * here once and never checked against a price again.
+ *
+ * Each card keeps a `blurb` describing what is actually in the category, which
+ * is true whether or not anything is reduced. That is what carries the card
+ * when the discount line is absent, rather than leaving a hole where the offer
+ * used to be.
+ */
+export function DealBanners({
+  byCategory,
+}: {
+  byCategory: Record<string, number>;
+}) {
   const deals = [
     {
-      title: "All Smart Locks",
-      subtitle: "Up to 20% Off!",
+      title: "Smart locks",
+      blurb: "Fingerprint, facial recognition and keypad entry.",
+      slug: "smart-locks",
       href: "/category/smart-locks",
       image: "/gigi.jpg",
       bgColor: "bg-ink-950",
@@ -618,8 +787,9 @@ export function DealBanners() {
       fade: "from-ink-950 via-ink-950/55",
     },
     {
-      title: "Alarm Systems",
-      subtitle: "Up to 18% Off!",
+      title: "Alarms & detection",
+      blurb: "Panels, sensors, sirens and smoke detection.",
+      slug: "alarms-detection",
       href: "/category/alarms-detection",
       image: "/videoframe.png",
       bgColor: "bg-ink-900",
@@ -628,52 +798,66 @@ export function DealBanners() {
   ];
 
   return (
-    // Was `py-4`, between two sections at py-16 — the pair sat jammed against
-    // the shelf above them and read as an afterthought rather than an offer.
-    <section className="container-page py-12 sm:py-16">
-      <div className="grid gap-6 sm:grid-cols-2">
-        {deals.map((deal) => (
-          <Link
-            key={deal.href}
-            href={deal.href}
-            className={`group relative flex min-h-[220px] flex-col justify-center overflow-hidden rounded-3xl ${deal.bgColor} p-8 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:min-h-[260px]`}
-          >
-            <div className="relative z-10 max-w-[60%]">
-              <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-white/70">
-                Today&apos;s Best Deal
-              </span>
-              <h3 className="mt-1.5 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
-                {deal.title}
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-white/90">{deal.subtitle}</p>
+    <section className="container-page py-14 sm:py-20">
+      <div className="grid gap-5 sm:grid-cols-2">
+        {deals.map((deal) => {
+          const percent = byCategory[deal.slug];
 
-              <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-ink-950 shadow-sm transition-all duration-300 group-hover:bg-white/90">
-                Shop now
-                <ArrowRight
-                  size={14}
-                  className="transition-transform group-hover:translate-x-1"
+          return (
+            <Link
+              key={deal.href}
+              href={deal.href}
+              className={`group relative flex min-h-[220px] flex-col justify-center overflow-hidden rounded-lg ${deal.bgColor} p-8 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:min-h-[260px]`}
+            >
+              <div className="relative z-10 max-w-[60%]">
+                {/* The eyebrow states the offer only when there is one. Both
+                    cards previously claimed to be "Today's Best Deal", which
+                    they cannot both be. */}
+                {percent ? (
+                  <span className="inline-flex items-center rounded-full bg-accent-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-white">
+                    Up to {percent}% off
+                  </span>
+                ) : (
+                  <span className="inline-block text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
+                    Shop the range
+                  </span>
+                )}
+
+                <h3 className="mt-2.5 font-display text-2xl font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[1.75rem]">
+                  {deal.title}
+                </h3>
+                <p className="mt-1.5 max-w-[26ch] text-sm leading-relaxed text-white/70">
+                  {deal.blurb}
+                </p>
+
+                <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-ink-950 shadow-sm transition-all duration-300 group-hover:bg-white/90">
+                  Shop now
+                  <ArrowRight
+                    size={14}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
+                </span>
+              </div>
+
+              <div className="absolute bottom-0 right-0 top-0 w-3/5 transition-transform duration-500 group-hover:scale-105 sm:w-1/2">
+                <Image
+                  fill
+                  src={deal.image}
+                  alt=""
+                  sizes="(max-width: 640px) 60vw, 25vw"
+                  className="object-cover"
                 />
-              </span>
-            </div>
-
-            <div className="absolute bottom-0 right-0 top-0 w-3/5 transition-transform duration-500 group-hover:scale-105 sm:w-1/2">
-              <Image
-                fill
-                src={deal.image}
-                alt=""
-                sizes="(max-width: 640px) 60vw, 25vw"
-                className="object-cover"
-              />
-              {/* The card colour bleeding across the photo's left edge. A
-                  gradient rather than the old solid block: it hides the seam at
-                  any card width, and it keeps working when the copy beside it
-                  runs long. */}
-              <div
-                className={`absolute inset-0 bg-gradient-to-r ${deal.fade} to-transparent`}
-              />
-            </div>
-          </Link>
-        ))}
+                {/* The card colour bleeding across the photo's left edge. A
+                    gradient rather than the old solid block: it hides the seam
+                    at any card width, and it keeps working when the copy beside
+                    it runs long. */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-r ${deal.fade} to-transparent`}
+                />
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -681,7 +865,10 @@ export function DealBanners() {
 
 export function LifestyleCta() {
   return (
-    <section className="relative my-16 overflow-hidden bg-ink-950 py-20 sm:my-20 sm:py-28">
+    /* No vertical margin: the band is full-bleed and dark, so letting the
+       neighbouring sections' own padding do the separating makes it read as a
+       deliberate break in the page rather than a floating slab. */
+    <section className="relative overflow-hidden bg-ink-950 py-20 sm:py-28">
       <div className="absolute inset-0">
         <Image
           fill
@@ -692,25 +879,41 @@ export function LifestyleCta() {
         />
       </div>
 
+      {/* A left-weighted scrim. The copy occupies the left third and the
+          photograph is worth seeing on the right, so darkening the whole frame
+          evenly would cost the image for contrast the right side never needed. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/70 to-ink-950/20"
+      />
+
       <div className="container-page relative z-10">
         <div className="max-w-xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand-500/10 border border-brand-500/20 px-3 py-1 backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-3 py-1 backdrop-blur-md">
             <ShieldCheck size={14} className="text-brand-400" />
             <span className="text-xs font-bold uppercase tracking-widest text-brand-400">
               A new standard of security
             </span>
           </div>
 
-          <h2 className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
-            Protect what matters with devices you can control from anywhere.
+          <h2 className="mt-5 font-display text-[2rem] font-black leading-[1.05] tracking-[-0.025em] text-white sm:text-5xl lg:text-[3.5rem]">
+            Protect what matters, from anywhere.
           </h2>
+
+          {/* The heading was the only thing in a 28rem-tall band, which is why
+              it looked thin for its space. One line of substance under it, and
+              it reads as a statement with a reason rather than a slogan. */}
+          <p className="mt-4 max-w-md text-base leading-relaxed text-white/70">
+            Lock up, arm the alarm and check who is at the door from your phone
+            — whether you are upstairs or in another province.
+          </p>
 
           <ButtonLink
             href="/products"
             size="lg"
-            className="mt-8 border border-white/15 bg-white/5 text-white backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/10 hover:scale-[1.02]"
+            className="mt-8 border border-white/15 bg-white/5 text-white backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:border-white/30 hover:bg-white/10"
           >
-            Explore All Products
+            Explore all products
             <ArrowRight size={18} />
           </ButtonLink>
         </div>

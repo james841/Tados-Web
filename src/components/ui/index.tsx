@@ -243,9 +243,14 @@ export function SectionHeading({
         ) : null}
 
         <h2
+          /* The loudest recurring voice on the page, which it previously was
+             not: at `text-2xl font-bold` the real section headings were being
+             out-shouted by the `font-black` promo cards between them, so the
+             page read as a run of adverts with captions rather than as
+             sections. Display face, one weight step up, one size step up. */
           className={cn(
-            "text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl",
-            eyebrow && "mt-2.5",
+            "font-display text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.02em] text-ink-950 sm:text-4xl",
+            eyebrow && "mt-3",
           )}
         >
           {title}
@@ -253,7 +258,7 @@ export function SectionHeading({
         {subtitle ? (
           <p
             className={cn(
-              "mt-1.5 max-w-2xl text-sm text-ink-500",
+              "mt-2.5 max-w-2xl text-[0.9375rem] leading-relaxed text-ink-600",
               centered && "mx-auto",
             )}
           >

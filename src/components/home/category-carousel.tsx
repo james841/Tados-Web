@@ -200,7 +200,7 @@ export function CategoryCarousel({
     <section
       aria-labelledby="popular-categories"
       aria-roledescription="carousel"
-      className={cn("container-page py-12 sm:py-16", className)}
+      className={cn("container-page py-14 sm:py-20", className)}
     >
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4 sm:mb-8">
         <div>
@@ -426,7 +426,7 @@ function CategoryCard({
 /** Suspense fallback that reserves the same height, so CLS stays at zero. */
 export function CategoryCarouselSkeleton() {
   return (
-    <section className="container-page py-12 sm:py-16">
+    <section className="container-page py-14 sm:py-20">
       <div className="mb-6 sm:mb-8">
         <div className="skeleton h-8 w-72 rounded" />
         <div className="skeleton mt-2 h-4 w-96 rounded" />

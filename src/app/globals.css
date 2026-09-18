@@ -89,6 +89,23 @@
   --color-indigo-50: oklch(0.97 0.01 270);
   --color-indigo-700: oklch(0.42 0.12 270);
 
+  /**
+   * Typography.
+   *
+   * Two registers, deliberately different jobs. `font-display` is Archivo,
+   * loaded in the root layout — it carries headlines, section titles and
+   * numerals, anywhere the page needs to sound like the brand. Everything else
+   * stays on the system stack, which is what it is good at and what costs
+   * nothing to load.
+   *
+   * The fallbacks are not decoration: `display: "swap"` means the first paint
+   * genuinely uses them, so the list has to be a stack somebody would accept
+   * seeing, not a last resort.
+   */
+  --font-display:
+    var(--font-archivo), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+
   /* Spacing */
   --spacing-page-x: 1rem;
   --spacing-page-x-sm: 1.5rem;
@@ -168,6 +185,34 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /**
+   * Motion — the brand marquee.
+   *
+   * `linear` is not a stylistic preference here, it is the only curve that
+   * works. Any easing makes the loop visibly stutter at the seam, because the
+   * track restarts at full speed while the eye is still tracking a
+   * decelerating one.
+   *
+   * 45s for a full pass, which is slow enough that a name stays readable for
+   * several seconds as it crosses. A marquee fast enough to notice is a
+   * marquee nobody reads.
+   *
+   * The travel is exactly `-50%` of a track holding two identical copies of
+   * the list — one copy's width. The second copy lands precisely where the
+   * first began, so the loop has no seam to hide. Pair with
+   * `motion-reduce:animate-none` at the call site.
+   */
+  --animate-marquee: marquee 45s linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
     }
   }
 }

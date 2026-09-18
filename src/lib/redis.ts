@@ -195,6 +195,8 @@ export const cacheKeys = {
   homeBestsellers: "home:bestsellers",
   homeFeatured: "home:featured",
   homeNewArrivals: "home:new-arrivals",
+  /** Real discount percentages for the homepage banners — see `getDealStats`. */
+  homeDeals: "home:deals",
   product: (slug: string) => `product:${slug}`,
   productRelated: (id: string) => `product:related:${id}`,
   categoryProducts: (slug: string, query: string) =>
