@@ -9,6 +9,7 @@ import { Providers } from "@/components/providers";
 import { GA_MEASUREMENT_ID, SITE } from "@/lib/constants";
 import { resolveCurrency } from "@/lib/currency";
 import { CURRENCY_COOKIE } from "@/lib/currency-shared";
+import { PAYFAST_ORIGIN } from "@/lib/payfast";
 import { getCategoryTree } from "@/lib/queries";
 
 /**
@@ -224,7 +225,11 @@ export default async function RootLayout({
   return (
     <html lang="en-ZA" className={displayFont.variable}>
       <head>
-        <link rel="preconnect" href="https://sandbox.payfast.co.za" />
+        {/* Warms the TLS handshake to whichever PayFast host checkout will
+            hand off to. Derived from the process URL rather than hard-coded,
+            so flipping PAYFAST_MODE can't leave this pointing at sandbox while
+            real customers are being sent to the live gateway. */}
+        <link rel="preconnect" href={PAYFAST_ORIGIN} />
         <OrganisationSchema />
       </head>
       <body className="flex min-h-screen flex-col antialiased">

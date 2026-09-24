@@ -5,18 +5,13 @@ import { CheckCircle2, Clock, Mail, MessageCircle, Package } from "lucide-react"
 import { ClearCartOnMount } from "@/components/checkout/clear-cart-on-mount";
 import { InstallationOffer } from "@/components/checkout/installation-offer";
 import { ButtonLink, EmptyState } from "@/components/ui";
-import {
-  IS_EMAIL_CHECKOUT,
-  MANUAL_PAYMENT_PROVIDER,
-} from "@/lib/checkout-mode";
-import { SITE, whatsappLink } from "@/lib/constants";
+import { MANUAL_PAYMENT_PROVIDER, SITE, whatsappLink } from "@/lib/constants";
 import { devConfirmOrder, devSettlementAllowed } from "@/lib/dev-settle";
 import { prisma } from "@/lib/prisma";
 import { formatDate, formatPrice, toNumber } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  // "Confirmed" would be a claim, and in email mode it isn't true yet.
-  title: IS_EMAIL_CHECKOUT ? "Order placed" : "Order confirmed",
+  title: "Order confirmed",
   robots: { index: false, follow: false },
 };
 
@@ -31,15 +26,16 @@ export const dynamic = "force-dynamic";
  * actually in, and says "processing" rather than "paid" when the callback
  * hasn't arrived yet.
  *
- * There are three unpaid endings, not one, and they need different words:
- * a PayFast payment still settling, an order cancelled outright, and an order
- * whose payment is being arranged by email because PayFast can't take money yet
- * (`lib/checkout-mode.ts`). The third is the *expected* ending right now, so it
- * reads as progress rather than as something gone wrong.
+ * There are three unpaid endings, not one, and they need different words: a
+ * Payfast payment still settling, an order cancelled outright, and a historical
+ * order whose payment was being arranged by hand from the period before the
+ * merchant account was approved. The third is read from the order's own payment
+ * row rather than from any environment variable — orders outlive configuration,
+ * and one of those still has to describe itself correctly if a customer digs
+ * out the link.
  *
- * On a dev machine PayFast cannot reach localhost, so `devConfirmOrder` settles
- * the order here instead. That helper is hard-gated to development + sandbox, and
- * declines email-mode orders outright.
+ * On a dev machine Payfast cannot reach localhost, so `devConfirmOrder` settles
+ * the order here instead. That helper is hard-gated to development + sandbox.
  */
 export default async function CheckoutSuccessPage({
   searchParams,
@@ -90,9 +86,10 @@ export default async function CheckoutSuccessPage({
   /**
    * Placed, unpaid, and waiting on the shop rather than on a gateway.
    *
-   * Read from the order's own payment row, not from `CHECKOUT_MODE` — orders
-   * outlive environment variables, and once PayFast is switched on, every email
-   * order already in the system still has to describe itself correctly.
+   * Read from the order's own payment row, not from configuration. Nothing
+   * writes this any more — every new order goes through Payfast — but the
+   * orders taken while the merchant account was pending are still in the
+   * database, and this page is linked from their confirmation email.
    */
   const awaitingArrangement =
     !paid &&

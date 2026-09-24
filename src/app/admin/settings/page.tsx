@@ -9,7 +9,6 @@ import {
   ShoppingBag,
 } from "lucide-react";
 
-import { IS_EMAIL_CHECKOUT } from "@/lib/checkout-mode";
 import {
   CITIES_SENTENCE,
   DELIVERY_PROMISE,
@@ -17,6 +16,7 @@ import {
   SITE,
   STANDARD_SHIPPING_FEE,
 } from "@/lib/constants";
+import { IS_SANDBOX } from "@/lib/payfast";
 
 export const metadata = {
   title: `Settings · Admin · ${SITE.shortName}`,
@@ -79,14 +79,21 @@ export default function AdminSettingsPage() {
         <dl className="divide-y divide-ink-100 text-sm">
           <Row
             label="Checkout"
-            value={
-              IS_EMAIL_CHECKOUT ? "Completed by email" : "PayFast (card & EFT)"
-            }
+            value="Payfast (card, Instant EFT & wallets)"
             icon={<CreditCard size={15} />}
+            note="Customers pay on Payfast's secure page; orders are marked paid by the ITN callback, never by the browser coming back."
+          />
+          <Row
+            label="Gateway mode"
+            value={IS_SANDBOX ? "Sandbox — test only" : "Live"}
+            icon={<CreditCard size={15} />}
+            // The one setting on this page whose wrong value is invisible from
+            // the shop front: a sandbox checkout looks and behaves exactly like
+            // a live one, right up to the money not arriving.
             note={
-              IS_EMAIL_CHECKOUT
-                ? `Orders arrive as an email to ${SITE.email} and payment is arranged by hand. Set NEXT_PUBLIC_CHECKOUT_MODE=payfast to switch card payments back on.`
-                : "Customers pay on PayFast's secure page; orders are marked paid by the ITN callback."
+              IS_SANDBOX
+                ? "No real money moves. Set PAYFAST_MODE=live in the deployment's environment variables to take payments."
+                : "Real payments. PAYFAST_MODE=live, signed with the merchant passphrase."
             }
           />
           <Row

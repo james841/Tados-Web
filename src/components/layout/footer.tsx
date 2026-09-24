@@ -3,19 +3,18 @@ import {
   Facebook,
   Instagram,
   Linkedin,
-  MessageCircle,
   RotateCcw,
   ShieldCheck,
   Truck,
 } from "lucide-react";
 
 import { LogoLink } from "@/components/layout/logo";
+import { PayFastMark } from "@/components/ui/payfast-mark";
 import {
   CITIES_SENTENCE,
   DELIVERY_WINDOW,
   POLICY_PAGES,
   SITE,
-  whatsappLink,
 } from "@/lib/constants";
 import { getCategoryTree } from "@/lib/queries";
 
@@ -150,12 +149,9 @@ export async function Footer() {
           <p>
             © {new Date().getFullYear()} {SITE.name}. All rights reserved.
           </p>
-          <p className="flex items-center gap-2">
-            Secure payments by
-            <span className="rounded bg-white px-2 py-1 font-bold text-ink-900">
-              PayFast
-            </span>
-          </p>
+          {/* The gateway's actual mark rather than the word set in bold, so the
+              badge here matches the page the customer is handed off to. */}
+          <PayFastMark label="Secure payments by" />
         </div>
       </div>
     </footer>

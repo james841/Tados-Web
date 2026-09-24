@@ -286,6 +286,22 @@ export const PRODUCTS_PER_PAGE = 12;
 export const FREE_SHIPPING_THRESHOLD = 1500;
 export const STANDARD_SHIPPING_FEE = 120;
 
+/**
+ * `Payment.provider` for an order that PayFast never saw.
+ *
+ * For a period before the merchant account was approved, checkout finished over
+ * email: the order was placed, the shop was emailed to arrange payment by hand,
+ * and no gateway was involved. Those orders are still in the database, so the
+ * marker has to stay even though nothing writes it any more.
+ *
+ * Three things read it, and all three would get the wrong answer without it: the
+ * admin order page (which must not show a PayFast payment id that doesn't
+ * exist), `/checkout/success` (which describes an awaiting-arrangement order
+ * differently from one waiting on an ITN), and the dev-only settlement helper
+ * (which refuses to fabricate a receipt for money nobody received).
+ */
+export const MANUAL_PAYMENT_PROVIDER = "manual";
+
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   PENDING: "Pending payment",
   PAID: "Paid",

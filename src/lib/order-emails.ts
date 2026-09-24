@@ -5,29 +5,22 @@ import {
   buildCustomerEmail,
   type OrderForEmail,
 } from "@/lib/order-email-templates";
-import {
-  buildAdminRequestEmail,
-  buildCustomerRequestEmail,
-} from "@/lib/order-request-email-templates";
 import { prisma } from "@/lib/prisma";
 
 /**
- * The two emails an order produces: a receipt for the customer and an alert for
- * whoever has to pack it.
+ * The two emails a paid order produces: a receipt for the customer and an alert
+ * for whoever has to pack it.
  *
  * Both are built from one database read and sent from one place, because the
  * failure mode that matters is asymmetric — a customer receipt that sends while
  * the admin alert silently doesn't means a paid order nobody knows about.
  *
- * `sendOrderEmails` is the paid pair, sent from the PayFast ITN handler.
- * `sendOrderRequestEmails` is the awaiting-payment pair, sent from `/api/checkout`
- * while PayFast is unapproved — see `lib/checkout-mode.ts`. The two are kept as
- * separate functions rather than one with a flag: the first runs on the payment
- * path and is deliberately left alone.
+ * Sent from the Payfast ITN handler, which is the only thing that marks an
+ * order paid. Nothing on the browser's return path sends these, so a receipt
+ * can never go out for money that hasn't arrived.
  *
- * The templates themselves live in `order-email-templates.ts` and
- * `order-request-email-templates.ts` so they can be rendered without a database
- * connection.
+ * The templates themselves live in `order-email-templates.ts` so they can be
+ * rendered without a database connection — see `npm run email:preview`.
  */
 
 /**
@@ -86,6 +79,30 @@ export type OrderEmailOutcome = {
 };
 
 /**
+ * Everyone who has to see a new order.
+ *
+ * `ADMIN_ORDER_EMAIL` is the configured list, and it is the right place to add
+ * a packer or a second inbox. But it is an environment variable, which means it
+ * can be unset in a new deployment, typo'd, or point at a mailbox nobody opens —
+ * and the failure is silent, because a paid order still looks fine from the
+ * shop front while nobody is packing it.
+ *
+ * So the shop's own published address is always in the list. Deduped
+ * case-insensitively, because a duplicate recipient means the provider sends
+ * the same alert twice.
+ */
+function adminRecipients() {
+  const seen = new Set<string>();
+
+  return [...getAdminOrderRecipients(), SITE.email].filter((address) => {
+    const key = address.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
  * Send both order emails. Resolves rather than rejects, always.
  *
  * Called from the PayFast ITN handler, which must answer 200 to every request or
@@ -133,7 +150,7 @@ export async function sendOrderEmails(
       text: customerEmail.text,
     }),
     sendEmail({
-      to: getAdminOrderRecipients(),
+      to: adminRecipients(),
       subject: adminEmail.subject,
       html: adminEmail.html,
       text: adminEmail.text,
@@ -150,113 +167,15 @@ export async function sendOrderEmails(
     });
   }
   if (!admin.ok) {
-    console.error("[order-emails] admin alert not sent", {
-      orderNumber: order.orderNumber,
-      ...admin,
-    });
-  }
-  if (!admin.ok && admin.reason === "no-recipient") {
-    console.warn(
-      "[order-emails] ADMIN_ORDER_EMAIL is not set — nobody was told about " +
-        `order ${order.orderNumber}.`,
+    // Louder than the customer's receipt: a missed receipt is an annoyed
+    // customer who can still be emailed, while a missed alert is a paid order
+    // that nobody is packing.
+    console.error(
+      `[order-emails] ORDER ALERT NOT SENT — ${order.orderNumber} is paid and nobody has been told`,
+      admin,
     );
   }
 
   return { customer, admin };
 }
 
-/**
- * Everyone who needs to see an order that is waiting for payment.
- *
- * `ADMIN_ORDER_EMAIL` is the configured list, but this email is the *only* thing
- * standing between a placed order and a sale while PayFast is unapproved. If that
- * variable is unset, or points somewhere that isn't watched, the order is simply
- * lost. So the shop's own published address is always in the list — deduped
- * case-insensitively, since a duplicate recipient means Resend sends twice.
- */
-function requestRecipients() {
-  const seen = new Set<string>();
-
-  return [...getAdminOrderRecipients(), SITE.email].filter((address) => {
-    const key = address.trim().toLowerCase();
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-/**
- * Send the awaiting-payment pair. Resolves rather than rejects, always.
- *
- * Called from `/api/checkout` after the order is committed. By that point the
- * order exists and stock has been taken, so a mail failure must not turn into a
- * 500 — the customer would see an error for an order that was placed, and would
- * quite reasonably place it again. Failures are logged and returned as values,
- * and the success page tells the customer what to expect either way.
- */
-export async function sendOrderRequestEmails(
-  orderId: string,
-): Promise<OrderEmailOutcome> {
-  const failed = (detail: string): SendEmailResult => ({
-    ok: false,
-    reason: "failed",
-    detail,
-  });
-
-  let order: OrderForEmail | null = null;
-
-  try {
-    order = await loadOrderForEmail(orderId);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    console.error("[order-request-emails] could not load order", {
-      orderId,
-      detail,
-    });
-    return { customer: failed(detail), admin: failed(detail) };
-  }
-
-  if (!order) {
-    console.error("[order-request-emails] order not found", { orderId });
-    return {
-      customer: failed("order not found"),
-      admin: failed("order not found"),
-    };
-  }
-
-  const customerEmail = buildCustomerRequestEmail(order);
-  const adminEmail = buildAdminRequestEmail(order);
-
-  const [customer, admin] = await Promise.all([
-    sendEmail({
-      to: order.email,
-      subject: customerEmail.subject,
-      html: customerEmail.html,
-      text: customerEmail.text,
-    }),
-    sendEmail({
-      to: requestRecipients(),
-      subject: adminEmail.subject,
-      html: adminEmail.html,
-      text: adminEmail.text,
-      // The whole point of this email is to start a conversation about payment.
-      // Hitting reply should open one with the customer.
-      replyTo: order.email,
-    }),
-  ]);
-
-  if (!customer.ok) {
-    console.error("[order-request-emails] customer acknowledgement not sent", {
-      orderNumber: order.orderNumber,
-      ...customer,
-    });
-  }
-  if (!admin.ok) {
-    // Louder than its paid counterpart on purpose: an unsent alert here is an
-    // order nobody will ever ask to be paid for.
-    console.error("[order-request-emails] PAYMENT REQUEST NOT SENT — order " +
-      `${order.orderNumber} is waiting and nobody has been told`, admin);
-  }
-
-  return { customer, admin };
-}

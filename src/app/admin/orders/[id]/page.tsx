@@ -9,7 +9,7 @@ import { ArrowLeft, CreditCard, MapPin, Package, User } from "lucide-react";
 import { useAdminFeedback } from "@/components/admin/feedback";
 import { ORDER_STATUSES, OrderStatusPill } from "@/components/admin/status-pill";
 import { OrderTimeline } from "@/components/orders/order-timeline";
-import { MANUAL_PAYMENT_PROVIDER } from "@/lib/checkout-mode";
+import { MANUAL_PAYMENT_PROVIDER } from "@/lib/constants";
 import { cn, formatDateTime, formatPrice } from "@/lib/utils";
 
 /**

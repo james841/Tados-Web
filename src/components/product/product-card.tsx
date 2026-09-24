@@ -54,7 +54,11 @@ export function ProductCard({
   return (
     <article
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border border-ink-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-ink-400 hover:shadow-xl hover:shadow-ink-900/5",
+        "group relative flex flex-col overflow-hidden rounded-2xl bg-white transition-all duration-300",
+        // Enhanced base border: darker, crisper contrast with a subtle outline ring
+        "border border-ink-300 shadow-sm ring-1 ring-black/[0.03]",
+        // Hover dynamics: stronger border, subtle lift, refined shadow focus
+        "hover:-translate-y-1 hover:border-ink-600 hover:ring-ink-600/10 hover:shadow-xl hover:shadow-ink-900/10",
         className,
       )}
     >
@@ -68,7 +72,7 @@ export function ProductCard({
            top and bottom off products that are mostly tall — locks, padlocks,
            alarm panels. Squaring it adds roughly 40px of card height and shows
            the whole device. */
-        className="relative aspect-square overflow-hidden bg-ink-50/50"
+        className="relative aspect-square overflow-hidden border-b border-ink-100/80 bg-ink-50/70"
       >
         {product.image ? (
           <Image
@@ -78,7 +82,7 @@ export function ProductCard({
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             priority={priority}
             loading={priority ? undefined : "lazy"}
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-108"
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs font-medium text-ink-400">
@@ -87,7 +91,7 @@ export function ProductCard({
         )}
 
         {/* Floating Badges */}
-        <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5 pointer-events-none">
+        <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5 pointer-events-none drop-shadow-sm">
           {product.isNewArrival ? <Badge tone="new">New</Badge> : null}
           <SaleBadge
             price={product.price}
@@ -97,8 +101,8 @@ export function ProductCard({
 
         {/* Out of stock Overlay with Backdrop Blur */}
         {outOfStock ? (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-            <Badge tone="muted" className="scale-105 font-medium shadow-sm">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/85 backdrop-blur-md">
+            <Badge tone="muted" className="scale-105 font-medium shadow-sm border border-ink-200">
               Out of stock
             </Badge>
           </div>
@@ -109,11 +113,11 @@ export function ProductCard({
       <div className="flex flex-1 flex-col p-4 sm:p-5">
         {/* Category & Title */}
         <div className="flex-1">
-          <p className="text-[10px] font-semibold tracking-widest uppercase text-ink-400">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-ink-400">
             {product.categoryName}
           </p>
 
-          <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-semibold tracking-tight text-ink-900 group-hover:text-ink-600 transition-colors">
+          <h3 className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-sm font-semibold tracking-tight text-ink-900 transition-colors group-hover:text-ink-600">
             <Link
               href={`/products/${product.slug}`}
               tabIndex={tabIndex}
@@ -134,7 +138,7 @@ export function ProductCard({
         </div>
 
         {/* Price & Action Button */}
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-ink-100/80 pt-3">
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-ink-100 pt-3.5">
           <div className="flex flex-col">
             <Price price={product.price} compareAtPrice={product.compareAtPrice} />
           </div>
@@ -149,15 +153,15 @@ export function ProductCard({
             className={cn(
               "relative flex size-10 shrink-0 items-center justify-center rounded-xl font-medium transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-900 focus-visible:ring-offset-2",
               added
-                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20 scale-105"
-                : "bg-ink-900 text-white hover:bg-ink-800 hover:shadow-md hover:shadow-ink-900/10",
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-105"
+                : "bg-ink-900 text-white hover:bg-ink-800 hover:shadow-lg hover:shadow-ink-900/15",
               outOfStock && "cursor-not-allowed bg-ink-100 text-ink-400 hover:bg-ink-100 hover:shadow-none active:scale-100",
             )}
           >
             {added ? (
               <Check size={18} className="animate-in zoom-in-50 duration-200" />
             ) : (
-              <ShoppingBag size={18} className="transition-transform group-hover/btn:scale-110" />
+              <ShoppingBag size={18} className="transition-transform duration-200 group-hover:scale-110" />
             )}
           </button>
         </div>

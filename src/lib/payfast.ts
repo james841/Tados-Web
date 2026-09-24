@@ -32,6 +32,9 @@ export const PAYFAST_PROCESS_URL = IS_SANDBOX
   ? "https://sandbox.payfast.co.za/eng/process"
   : "https://www.payfast.co.za/eng/process";
 
+/** Host the browser hands off to — for the root layout's `preconnect`. */
+export const PAYFAST_ORIGIN = new URL(PAYFAST_PROCESS_URL).origin;
+
 const PAYFAST_VALIDATE_URL = IS_SANDBOX
   ? "https://sandbox.payfast.co.za/eng/query/validate"
   : "https://www.payfast.co.za/eng/query/validate";
@@ -44,13 +47,41 @@ const VALID_ITN_HOSTS = [
   "w2w.payfast.co.za",
 ];
 
+/**
+ * PayFast's public sandbox merchant.
+ *
+ * These are not secrets and never were — they are printed in PayFast's own
+ * documentation, and anyone can log into that account and reconfigure it. They
+ * are the right default in sandbox and a disaster in live mode, which is what
+ * `usesSandboxMerchant` below exists to catch: a deployment missing
+ * `PAYFAST_MERCHANT_ID` would otherwise send real customers to a shared test
+ * account, take their money into somebody else's balance, and look completely
+ * normal doing it.
+ */
+const SANDBOX_MERCHANT = {
+  id: "10000100",
+  key: "46f0cd694581a",
+} as const;
+
 export function getPayFastConfig() {
+  // `|| fallback` rather than `??`: an env var set to an empty string is the
+  // common shape of "I meant to fill this in", and it must not read as a
+  // configured value.
+  const merchantId =
+    process.env.PAYFAST_MERCHANT_ID?.trim() || SANDBOX_MERCHANT.id;
+  const merchantKey =
+    process.env.PAYFAST_MERCHANT_KEY?.trim() || SANDBOX_MERCHANT.key;
+
   return {
-    merchantId: process.env.PAYFAST_MERCHANT_ID ?? "10000100",
-    merchantKey: process.env.PAYFAST_MERCHANT_KEY ?? "46f0cd694581a",
-    passphrase: process.env.PAYFAST_PASSPHRASE ?? "",
+    merchantId,
+    merchantKey,
+    passphrase: process.env.PAYFAST_PASSPHRASE?.trim() ?? "",
     mode: PAYFAST_MODE,
     processUrl: PAYFAST_PROCESS_URL,
+    /** True when either credential is still the shared public test account. */
+    usesSandboxMerchant:
+      merchantId === SANDBOX_MERCHANT.id ||
+      merchantKey === SANDBOX_MERCHANT.key,
   };
 }
 
@@ -138,6 +169,20 @@ export interface PayFastPaymentInput {
 export function buildPaymentData(input: PayFastPaymentInput) {
   const config = getPayFastConfig();
 
+  /**
+   * Live mode, sandbox credentials — stop before anyone is charged.
+   *
+   * This is the one misconfiguration that does damage silently. Every other
+   * missing variable produces a visible error; this one produces a working
+   * checkout that routes real customers' money into a public test account. A
+   * failed checkout is recoverable, a misdirected payment is not.
+   */
+  if (!IS_SANDBOX && config.usesSandboxMerchant) {
+    throw new Error(
+      "PAYFAST_MERCHANT_ID / PAYFAST_MERCHANT_KEY are still PayFast's public sandbox credentials while PAYFAST_MODE=live: refusing to send a real payment to a shared test account.",
+    );
+  }
+
   const data: Record<string, string> = {
     merchant_id: config.merchantId,
     merchant_key: config.merchantKey,
@@ -207,6 +252,16 @@ export function buildPaymentData(input: PayFastPaymentInput) {
  */
 export function verifyItnSignature(payload: Record<string, string>): boolean {
   const config = getPayFastConfig();
+
+  // Same misconfiguration `buildPaymentData()` refuses to send under, but this
+  // side fails closed instead of throwing: the notify route has to answer 200
+  // or PayFast retries forever, so an unverifiable ITN is rejected, not raised.
+  if (!IS_SANDBOX && config.usesSandboxMerchant) {
+    console.error(
+      "[payfast] live mode is running on sandbox merchant credentials — rejecting ITN",
+    );
+    return false;
+  }
 
   if (!config.passphrase) {
     if (!IS_SANDBOX) return false;
