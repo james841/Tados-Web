@@ -328,8 +328,13 @@ function CartFooter({
       <div className="flex items-baseline justify-between">
         <div>
           <p className="text-sm font-bold text-ink-900">Total</p>
+          {/* Was "Tax included. Shipping calculated at checkout." Both halves
+              were wrong: no tax is charged, so there is none to be included,
+              and delivery is free — nothing is calculated later. The line now
+              says the one thing a shopper looking at this number wants to know,
+              which is that it isn't about to grow. */}
           <p className="mt-0.5 text-xs text-ink-500">
-            Tax included. Shipping calculated at checkout.
+            Nothing else is added at checkout.
           </p>
         </div>
         <p className="text-lg font-bold tabular-nums text-ink-900">

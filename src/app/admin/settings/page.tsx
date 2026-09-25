@@ -12,9 +12,7 @@ import {
 import {
   CITIES_SENTENCE,
   DELIVERY_PROMISE,
-  FREE_SHIPPING_THRESHOLD,
   SITE,
-  STANDARD_SHIPPING_FEE,
 } from "@/lib/constants";
 import { IS_SANDBOX } from "@/lib/payfast";
 
@@ -97,14 +95,9 @@ export default function AdminSettingsPage() {
             }
           />
           <Row
-            label="Standard shipping"
-            value={`R${STANDARD_SHIPPING_FEE}`}
+            label="Delivery"
+            value="Free on every order"
             note={DELIVERY_PROMISE}
-          />
-          <Row
-            label="Shipping waived above"
-            value={`R${FREE_SHIPPING_THRESHOLD.toLocaleString("en-ZA")}`}
-            note="Internal pricing rule only — not advertised to customers"
           />
           <Row
             label="Tax"

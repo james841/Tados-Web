@@ -13,11 +13,7 @@ import {
   EmptyState,
   Price,
 } from "@/components/ui";
-import {
-  DELIVERY_PROMISE,
-  FREE_SHIPPING_THRESHOLD,
-  STANDARD_SHIPPING_FEE,
-} from "@/lib/constants";
+import { DELIVERY_PROMISE, SHIPPING_FEE } from "@/lib/constants";
 
 /**
  * Cart view with inline quantity controls and a "Clear cart" button that
@@ -31,13 +27,8 @@ export function CartView() {
 
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
 
-  const shipping =
-    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+  const shipping = SHIPPING_FEE;
   const total = subtotal + shipping;
-  // NOTE: the R1 500 threshold is still what the checkout API charges
-  // (api/checkout/route.ts). Only the promotional "free shipping" wording was
-  // removed — dropping the rule itself would silently raise the price of every
-  // large order, which isn't what was asked for.
 
   function handleClearCart() {
     if (!session?.user) {
@@ -194,7 +185,7 @@ export function CartView() {
             <div className="flex justify-between">
               <span className="text-ink-600">Shipping</span>
               {shipping === 0 ? (
-                <span className="font-semibold text-ink-900">Included</span>
+                <span className="font-semibold text-brand-700">Free</span>
               ) : (
                 <Price price={shipping} />
               )}

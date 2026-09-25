@@ -1,8 +1,7 @@
 import { HttpError, handleRoute, jsonOk, parseBody } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
-  FREE_SHIPPING_THRESHOLD,
-  STANDARD_SHIPPING_FEE,
+  SHIPPING_FEE,
   SITE,
 } from "@/lib/constants";
 import { buildPaymentData, PAYFAST_PROCESS_URL } from "@/lib/payfast";
@@ -107,8 +106,7 @@ export async function POST(request: Request) {
     // Totals are recomputed from database prices. Rounded to cents so the
     // amount we sign matches the amount PayFast echoes back in the ITN.
     const subtotal = round2(lines.reduce((sum, l) => sum + l.lineTotal, 0));
-    const shipping =
-      subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+    const shipping = SHIPPING_FEE;
     const total = round2(subtotal + shipping);
 
     const orderNumber = generateOrderNumber();

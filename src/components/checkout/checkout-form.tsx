@@ -7,10 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button, CurrencyAmount, CurrencyNotice, Price } from "@/components/ui";
 import { PayFastMark } from "@/components/ui/payfast-mark";
-import {
-  FREE_SHIPPING_THRESHOLD,
-  STANDARD_SHIPPING_FEE,
-} from "@/lib/constants";
+import { SHIPPING_FEE } from "@/lib/constants";
 import { cn, formatPrice, SA_PROVINCES } from "@/lib/utils";
 import { selectCartSubtotal, useCart } from "@/store/cart";
 
@@ -78,8 +75,7 @@ export function CheckoutForm() {
     fields: Record<string, string>;
   } | null>(null);
 
-  const shipping =
-    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+  const shipping = SHIPPING_FEE;
   const total = subtotal + shipping;
 
   const hydrated = useHydrated();
@@ -534,7 +530,7 @@ export function CheckoutForm() {
             <div className="flex justify-between">
               <span className="text-ink-600">Shipping</span>
               {shipping === 0 ? (
-                <span className="font-semibold text-ink-900">Included</span>
+                <span className="font-semibold text-brand-700">Free</span>
               ) : (
                 <Price price={shipping} showBase={false} />
               )}

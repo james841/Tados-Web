@@ -2,9 +2,8 @@ import "server-only";
 
 import {
   DELIVERY_WINDOW,
-  FREE_SHIPPING_THRESHOLD,
+  SHIPPING_FEE,
   SITE,
-  STANDARD_SHIPPING_FEE,
   absoluteUrl,
 } from "@/lib/constants";
 import type { MerchantFeedProduct } from "@/lib/queries";
@@ -167,16 +166,19 @@ function item(product: MerchantFeedProduct): string | null {
   const onSale = listPrice !== product.price;
 
   /**
-   * Declared per item so the feed works before shipping settings are
-   * configured in Merchant Center.
+   * Declared per item even though it is always zero.
    *
-   * A product priced at or above the free-delivery threshold clears it on its
-   * own, so quoting the flat fee against it would overstate the cost. Below it,
-   * the flat fee is what a single-item order pays. Underquoting is the policy
-   * violation, so anything that could go either way quotes the fee.
+   * Omitting `g:shipping` doesn't mean "free" to Merchant Center — it means
+   * "look it up in the account's shipping settings", and if those were never
+   * configured the item is disapproved for missing shipping information. An
+   * explicit 0 states the actual policy without depending on a setting nobody
+   * on the shop's side has touched.
+   *
+   * Reads `SHIPPING_FEE` rather than hard-coding 0 so that the day a fee comes
+   * back, the feed quotes it instead of advertising free delivery Google will
+   * check against the checkout page.
    */
-  const shipping =
-    product.price >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+  const shipping = SHIPPING_FEE;
 
   const lines = [
     "  <item>",

@@ -275,16 +275,26 @@ export type SortOption = (typeof SORT_OPTIONS)[number]["value"];
 export const PRODUCTS_PER_PAGE = 12;
 
 /**
- * Shipping economics.
+ * Delivery is not charged for.
  *
- * The threshold still exists because checkout has to price delivery, but no
- * customer-facing surface advertises "free shipping over R…" any more — the
- * Shipping Policy makes any free-delivery promotion conditional, so promising it
- * in a header badge would contradict the policy. `FREE_SHIPPING_THRESHOLD` is
- * now purely an internal pricing rule.
+ * It used to be R120, waived above R1 500. That rule turned a R69 padlock into
+ * R189 at the last step, and the fee only appeared once the customer had already
+ * decided to buy — the single worst place to add a number. The shop's
+ * instruction is that the price on the shelf is the price paid.
+ *
+ * Named rather than inlined, because four surfaces have to quote the same
+ * figure: the checkout API that signs the amount, the cart, the checkout summary
+ * and the Merchant Center feed. A fee that reappears in one of them and not the
+ * others is exactly the mismatch this replaces.
+ *
+ * Annotated `number` on purpose. Without it the literal type is `0`, and every
+ * `shipping === 0` check downstream narrows to a constant — so the row that
+ * would have to display a reinstated fee quietly becomes dead code.
+ *
+ * Historical orders keep whatever `Order.shipping` they were charged. This
+ * governs new ones only.
  */
-export const FREE_SHIPPING_THRESHOLD = 1500;
-export const STANDARD_SHIPPING_FEE = 120;
+export const SHIPPING_FEE: number = 0;
 
 /**
  * `Payment.provider` for an order that PayFast never saw.

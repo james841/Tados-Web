@@ -222,7 +222,7 @@ export default async function CheckoutSuccessPage({
             label="Shipping"
             value={
               toNumber(order.shipping) === 0
-                ? "Included"
+                ? "Free"
                 : formatPrice(toNumber(order.shipping))
             }
           />
